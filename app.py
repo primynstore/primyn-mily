@@ -2,7 +2,7 @@
 # PRIMYN STUDIO — SERVIDOR PRINCIPAL (COMPLETO)
 # ═══════════════════════════════════════════════
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from mily import processar_mensagem, carregar_sessoes
 from zapi import enviar_mensagem, enviar_documento
 from email_service import notificar_andre, enviar_confirmacao_cliente, notificar_designer
@@ -34,11 +34,9 @@ def webhook_mily():
     try:
         dados = request.json
         
-        # Ignorar mensagens enviadas por nós
         if dados.get("fromMe", False):
             return jsonify({"status": "ignored", "reason": "fromMe"}), 200
         
-        # Extrair número e mensagem
         numero = dados.get("phone", "")
         mensagem = dados.get("body", "") or dados.get("text", {}).get("message", "")
         
@@ -49,15 +47,12 @@ def webhook_mily():
         
         print(f"[RECEBIDO] {numero}: {mensagem}")
         
-        # Processar com a Mily
         resposta, handoff_data = processar_mensagem(numero, mensagem)
         
-        # Enviar resposta
         if resposta:
             enviar_mensagem(numero, resposta)
             print(f"[ENVIADO] {numero}: {resposta[:50]}...")
         
-        # Se houve handoff
         if handoff_data:
             acionar_handoff(handoff_data)
         
@@ -71,26 +66,21 @@ def webhook_mily():
 def acionar_handoff(dados):
     """Aciona todas as automações de handoff"""
     try:
-        # 1. Salvar no CRM
         salvar_lead(dados)
         print(f"[HANDOFF] CRM atualizado: {dados.get('nome')}")
         
-        # 2. Gerar proposta PDF
         caminho_pdf = gerar_proposta(dados)
         print(f"[HANDOFF] PDF gerado: {caminho_pdf}")
         
-        # 3. Notificar André
         notificar_andre(dados)
         print(f"[HANDOFF] André notificado")
         
-        # 4. Confirmação ao cliente
         email_cliente = dados.get("email")
         nome_cliente = dados.get("nome", "").split()[0]
         if email_cliente:
             enviar_confirmacao_cliente(email_cliente, nome_cliente)
             print(f"[HANDOFF] E-mail enviado ao cliente")
         
-        # 5. Notificar designer (se identidade visual)
         if dados.get("criacao") == "identidade_visual":
             notificar_designer(dados)
             print(f"[HANDOFF] Designer notificado")
@@ -143,6 +133,12 @@ def dashboard():
 def ver_followups():
     """Ver follow-ups agendados"""
     return jsonify(carregar_followups())
+
+
+@app.route("/painel", methods=["GET"])
+def painel():
+    """Painel visual da Mily"""
+    return send_file("painel_mily.html")
 
 
 @app.route("/health", methods=["GET"])
