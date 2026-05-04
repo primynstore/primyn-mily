@@ -3,6 +3,7 @@
 # ═══════════════════════════════════════════════
 
 from flask import Flask, request, jsonify, send_file
+from flask_cors import CORS
 from mily import processar_mensagem, carregar_sessoes
 from zapi import enviar_mensagem, enviar_documento
 from email_service import notificar_andre, enviar_confirmacao_cliente, notificar_designer
