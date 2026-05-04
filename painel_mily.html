@@ -8,47 +8,55 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #F7F5F0; --surface: #FFFFFF; --border: #E8E4DC; --text: #1A1814;
-    --muted: #8A8478; --accent: #2D6A4F; --accent-light: #E8F5EF; --accent-mid: #52B788;
-    --amber: #E76F51; --amber-light: #FDF0EC; --blue: #2B4590; --blue-light: #EEF1FA;
+    --bg: #F5F0E8;
+    --surface: #EDE8DC;
+    --surface2: #E0D9C8;
+    --border: #C8BFA8;
+    --text: #1A1610;
+    --muted: #6B6456;
+    --accent: #1A1610;
+    --accent-light: #D8D0BC;
+    --accent-mid: #4A4035;
+    --gold: #C4A882;
+    --gold-light: #EDE3D0;
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.25rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  header { background: var(--text); padding: 1.25rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
   .logo { display: flex; align-items: center; gap: 12px; }
-  .logo-mark { width: 36px; height: 36px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-family: 'DM Serif Display', serif; font-size: 18px; }
-  .logo-text { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text); }
-  .logo-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+  .logo-mark { width: 36px; height: 36px; background: var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text); font-family: 'DM Serif Display', serif; font-size: 18px; }
+  .logo-text { font-family: 'DM Serif Display', serif; font-size: 20px; color: #F5F0E8; }
+  .logo-sub { font-size: 11px; color: #9A9080; letter-spacing: 0.5px; text-transform: uppercase; }
   .header-right { display: flex; align-items: center; gap: 12px; }
-  .status-pill { display: flex; align-items: center; gap: 7px; background: var(--accent-light); color: var(--accent); font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 100px; }
-  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-mid); animation: pulse 2s infinite; }
+  .status-pill { display: flex; align-items: center; gap: 7px; background: rgba(255,255,255,0.08); color: #C4A882; font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 100px; border: 1px solid rgba(196,168,130,0.3); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #C4A882; animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-  .btn-refresh { background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 16px; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
-  .btn-refresh:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  .btn-refresh { background: transparent; border: 1px solid #4A4035; color: #9A9080; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 16px; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+  .btn-refresh:hover { border-color: var(--gold); color: var(--gold); }
   main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
   .page-title { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--text); margin-bottom: 4px; }
   .page-sub { font-size: 14px; color: var(--muted); margin-bottom: 2rem; }
   .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 2.5rem; }
-  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; transition: transform 0.15s; }
+  .metric { background: var(--text); border-radius: 14px; padding: 1.25rem; transition: transform 0.15s; }
   .metric:hover { transform: translateY(-2px); }
-  .metric-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; margin-bottom: 12px; }
-  .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-  .metric-value { font-family: 'DM Serif Display', serif; font-size: 32px; color: var(--text); line-height: 1; }
+  .metric-icon { font-size: 18px; margin-bottom: 12px; }
+  .metric-label { font-size: 11px; color: #9A9080; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .metric-value { font-family: 'DM Serif Display', serif; font-size: 32px; color: #F5F0E8; line-height: 1; }
   .section { margin-bottom: 2.5rem; }
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-  .section-title { font-size: 13px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
-  .section-count { font-size: 12px; color: var(--muted); background: var(--bg); padding: 3px 10px; border-radius: 100px; border: 1px solid var(--border); }
+  .section-title { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .section-count { font-size: 12px; color: var(--muted); background: var(--surface); padding: 3px 10px; border-radius: 100px; border: 1px solid var(--border); }
   .leads-list { display: flex; flex-direction: column; gap: 10px; }
   .lead-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 14px; transition: border-color 0.15s, transform 0.15s; }
   .lead-card:hover { border-color: var(--accent-mid); transform: translateX(3px); }
-  .avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--accent); flex-shrink: 0; }
+  .avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--text); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--gold); flex-shrink: 0; }
   .lead-info { flex: 1; min-width: 0; }
   .lead-name { font-size: 15px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lead-number { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: monospace; }
   .lead-meta { font-size: 11px; color: var(--muted); margin-top: 5px; display: flex; gap: 12px; flex-wrap: wrap; }
   .badge { font-size: 11px; font-weight: 500; padding: 4px 12px; border-radius: 100px; white-space: nowrap; flex-shrink: 0; }
-  .badge-novo { background: var(--blue-light); color: var(--blue); }
-  .badge-qualif { background: var(--accent-light); color: var(--accent); }
-  .badge-handoff { background: var(--amber-light); color: var(--amber); }
+  .badge-novo { background: var(--text); color: var(--gold); }
+  .badge-qualif { background: var(--gold-light); color: var(--accent-mid); }
+  .badge-handoff { background: var(--surface2); color: var(--muted); }
   .empty { background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; padding: 2.5rem; text-align: center; color: var(--muted); font-size: 14px; }
   .empty-icon { font-size: 28px; margin-bottom: 10px; }
   .loading { display: flex; align-items: center; justify-content: center; padding: 2rem; color: var(--muted); font-size: 14px; gap: 10px; }
@@ -79,10 +87,10 @@
   <div class="page-title">Olá, Daiane ✦</div>
   <div class="page-sub" id="page-sub">Carregando dados da Mily...</div>
   <div class="metrics">
-    <div class="metric"><div class="metric-icon" style="background:#E8F5EF;">📋</div><div class="metric-label">Total de leads</div><div class="metric-value" id="m-total">—</div></div>
-    <div class="metric"><div class="metric-icon" style="background:#EEF1FA;">🔍</div><div class="metric-label">Qualificando</div><div class="metric-value" id="m-qualif">—</div></div>
-    <div class="metric"><div class="metric-icon" style="background:#FDF0EC;">⏳</div><div class="metric-label">Aguardando</div><div class="metric-value" id="m-aguard">—</div></div>
-    <div class="metric"><div class="metric-icon" style="background:#FBF6E9;">📅</div><div class="metric-label">Follow-ups</div><div class="metric-value" id="m-follow">—</div></div>
+    <div class="metric"><div class="metric-icon">📋</div><div class="metric-label">Total de leads</div><div class="metric-value" id="m-total">—</div></div>
+    <div class="metric"><div class="metric-icon">🔍</div><div class="metric-label">Qualificando</div><div class="metric-value" id="m-qualif">—</div></div>
+    <div class="metric"><div class="metric-icon">⏳</div><div class="metric-label">Aguardando</div><div class="metric-value" id="m-aguard">—</div></div>
+    <div class="metric"><div class="metric-icon">📅</div><div class="metric-label">Follow-ups</div><div class="metric-value" id="m-follow">—</div></div>
   </div>
   <div class="section">
     <div class="section-header"><div class="section-title">Leads ativos</div><div class="section-count" id="leads-count">—</div></div>
@@ -109,7 +117,33 @@ async function carregarDados() {
     const dash = await dashRes.json();
     const follows = await followRes.json();
     const status = await statusRes.json();
-    const pill = document.getElementById('status-pill');
     const stText = document.getElementById('status-text');
-    if (status.status === 'online') { pill.style.background='var(--accent-light)'; pill.style.color='var(--accent)'; stText.textContent='Mily online'; }
-    else { pill.style.background='var(--amber-light)'; pill.style.color='var(--amber)'; stText.textContent='Verificar
+    stText.textContent = status.status === 'online' ? 'Mily online' : 'Verificar status';
+    document.getElementById('m-total').textContent = dash.total_leads ?? 0;
+    document.getElementById('m-qualif').textContent = dash.em_qualificacao ?? 0;
+    document.getElementById('m-aguard').textContent = dash.aguardando ?? 0;
+    document.getElementById('m-follow').textContent = follows.length ?? 0;
+    document.getElementById('leads-count').textContent = (dash.leads?.length ?? 0) + ' lead(s)';
+    document.getElementById('follow-count').textContent = follows.length + ' pendente(s)';
+    const leadsList = document.getElementById('leads-list');
+    leadsList.innerHTML = !dash.leads || dash.leads.length === 0
+      ? '<div class="empty"><div class="empty-icon">🌱</div>Nenhum lead ainda.</div>'
+      : dash.leads.map(renderLead).join('');
+    const followList = document.getElementById('follow-list');
+    followList.innerHTML = !follows || follows.length === 0
+      ? '<div class="empty"><div class="empty-icon">✅</div>Nenhum follow-up pendente.</div>'
+      : follows.map(f => `<div class="lead-card"><div class="avatar">${iniciais(f.nome)}</div><div class="lead-info"><div class="lead-name">${f.nome||'Cliente'}</div><div class="lead-number">${f.numero}</div><div class="lead-meta"><span>📅 ${formatarData(f.data)}</span></div></div><span class="badge badge-handoff">Follow-up</span></div>`).join('');
+    const now = new Date().toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('page-sub').textContent = 'Visão geral do atendimento da Mily';
+    document.getElementById('last-update').textContent = 'Última atualização: ' + now;
+  } catch(e) {
+    document.getElementById('status-text').textContent = 'Erro de conexão';
+    document.getElementById('leads-list').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>Não foi possível conectar à Mily.</div>';
+    document.getElementById('follow-list').innerHTML = '<div class="empty">—</div>';
+  }
+}
+carregarDados();
+setInterval(carregarDados, 60000);
+</script>
+</body>
+</html>
