@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Mily — Primyn</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F5F0; --surface: #FFFFFF; --border: #E8E4DC; --text: #1A1814;
+    --muted: #8A8478; --accent: #2D6A4F; --accent-light: #E8F5EF; --accent-mid: #52B788;
+    --amber: #E76F51; --amber-light: #FDF0EC; --blue: #2B4590; --blue-light: #EEF1FA;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.25rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark { width: 36px; height: 36px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-family: 'DM Serif Display', serif; font-size: 18px; }
+  .logo-text { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--text); }
+  .logo-sub { font-size: 11px; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .status-pill { display: flex; align-items: center; gap: 7px; background: var(--accent-light); color: var(--accent); font-size: 12px; font-weight: 500; padding: 6px 14px; border-radius: 100px; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent-mid); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .btn-refresh { background: var(--surface); border: 1px solid var(--border); color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 7px 16px; border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+  .btn-refresh:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .page-title { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--text); margin-bottom: 4px; }
+  .page-sub { font-size: 14px; color: var(--muted); margin-bottom: 2rem; }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 2.5rem; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; transition: transform 0.15s; }
+  .metric:hover { transform: translateY(-2px); }
+  .metric-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; margin-bottom: 12px; }
+  .metric-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .metric-value { font-family: 'DM Serif Display', serif; font-size: 32px; color: var(--text); line-height: 1; }
+  .section { margin-bottom: 2.5rem; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .section-title { font-size: 13px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .section-count { font-size: 12px; color: var(--muted); background: var(--bg); padding: 3px 10px; border-radius: 100px; border: 1px solid var(--border); }
+  .leads-list { display: flex; flex-direction: column; gap: 10px; }
+  .lead-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.25rem; display: flex; align-items: center; gap: 14px; transition: border-color 0.15s, transform 0.15s; }
+  .lead-card:hover { border-color: var(--accent-mid); transform: translateX(3px); }
+  .avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-family: 'DM Serif Display', serif; font-size: 16px; color: var(--accent); flex-shrink: 0; }
+  .lead-info { flex: 1; min-width: 0; }
+  .lead-name { font-size: 15px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lead-number { font-size: 12px; color: var(--muted); margin-top: 2px; font-family: monospace; }
+  .lead-meta { font-size: 11px; color: var(--muted); margin-top: 5px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .badge { font-size: 11px; font-weight: 500; padding: 4px 12px; border-radius: 100px; white-space: nowrap; flex-shrink: 0; }
+  .badge-novo { background: var(--blue-light); color: var(--blue); }
+  .badge-qualif { background: var(--accent-light); color: var(--accent); }
+  .badge-handoff { background: var(--amber-light); color: var(--amber); }
+  .empty { background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; padding: 2.5rem; text-align: center; color: var(--muted); font-size: 14px; }
+  .empty-icon { font-size: 28px; margin-bottom: 10px; }
+  .loading { display: flex; align-items: center; justify-content: center; padding: 2rem; color: var(--muted); font-size: 14px; gap: 10px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .last-update { font-size: 11px; color: var(--muted); text-align: right; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  @media (max-width: 600px) { header { padding: 1rem; } main { padding: 1.25rem 1rem; } .page-title { font-size: 22px; } .metrics { grid-template-columns: repeat(2, 1fr); } .lead-meta { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <div class="logo-mark">P</div>
+    <div>
+      <div class="logo-text">Primyn</div>
+      <div class="logo-sub">Painel da Mily</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill" id="status-pill">
+      <div class="status-dot"></div>
+      <span id="status-text">Verificando...</span>
+    </div>
+    <button class="btn-refresh" onclick="carregarDados()">↻ Atualizar</button>
+  </div>
+</header>
+<main>
+  <div class="page-title">Olá, Daiane ✦</div>
+  <div class="page-sub" id="page-sub">Carregando dados da Mily...</div>
+  <div class="metrics">
+    <div class="metric"><div class="metric-icon" style="background:#E8F5EF;">📋</div><div class="metric-label">Total de leads</div><div class="metric-value" id="m-total">—</div></div>
+    <div class="metric"><div class="metric-icon" style="background:#EEF1FA;">🔍</div><div class="metric-label">Qualificando</div><div class="metric-value" id="m-qualif">—</div></div>
+    <div class="metric"><div class="metric-icon" style="background:#FDF0EC;">⏳</div><div class="metric-label">Aguardando</div><div class="metric-value" id="m-aguard">—</div></div>
+    <div class="metric"><div class="metric-icon" style="background:#FBF6E9;">📅</div><div class="metric-label">Follow-ups</div><div class="metric-value" id="m-follow">—</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><div class="section-title">Leads ativos</div><div class="section-count" id="leads-count">—</div></div>
+    <div class="leads-list" id="leads-list"><div class="loading"><div class="spinner"></div> Carregando leads...</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header"><div class="section-title">Follow-ups pendentes</div><div class="section-count" id="follow-count">—</div></div>
+    <div class="leads-list" id="follow-list"><div class="loading"><div class="spinner"></div> Carregando follow-ups...</div></div>
+  </div>
+  <div class="last-update" id="last-update"></div>
+</main>
+<script>
+const API = 'https://web-production-a8c8.up.railway.app';
+function iniciais(nome) { if (!nome || nome === 'N/A') return '?'; return nome.trim().split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2); }
+function formatarData(iso) { if (!iso) return '—'; return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); }
+function badgeClasse(tipo, etapa) { if (etapa === 'handoff') return 'badge-handoff'; if (tipo === 'novo_lead') return 'badge-novo'; return 'badge-qualif'; }
+function badgeLabel(tipo, etapa) { if (etapa === 'handoff') return 'Handoff'; if (tipo === 'novo_lead') return 'Novo lead'; return 'Qualificando'; }
+function renderLead(l) {
+  return `<div class="lead-card"><div class="avatar">${iniciais(l.nome)}</div><div class="lead-info"><div class="lead-name">${l.nome !== 'N/A' ? l.nome : 'Cliente'}</div><div class="lead-number">${l.numero}</div><div class="lead-meta"><span>📦 ${l.produto !== 'N/A' ? l.produto : 'Não informado'}</span><span>🕐 ${formatarData(l.ultimo_contato)}</span></div></div><span class="badge ${badgeClasse(l.tipo, l.etapa)}">${badgeLabel(l.tipo, l.etapa)}</span></div>`;
+}
+async function carregarDados() {
+  try {
+    const [dashRes, followRes, statusRes] = await Promise.all([fetch(API+'/dashboard'), fetch(API+'/followups'), fetch(API+'/')]);
+    const dash = await dashRes.json();
+    const follows = await followRes.json();
+    const status = await statusRes.json();
+    const pill = document.getElementById('status-pill');
+    const stText = document.getElementById('status-text');
+    if (status.status === 'online') { pill.style.background='var(--accent-light)'; pill.style.color='var(--accent)'; stText.textContent='Mily online'; }
+    else { pill.style.background='var(--amber-light)'; pill.style.color='var(--amber)'; stText.textContent='Verificar
