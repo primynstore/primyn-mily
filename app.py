@@ -13,7 +13,7 @@ from followup import carregar_followups
 from scheduler import iniciar_scheduler
 import os
 
-app = Flask(__name__)
+app = Flask(__name__) CORS(app)
 
 # Iniciar scheduler de follow-ups
 iniciar_scheduler()
