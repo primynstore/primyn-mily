@@ -138,7 +138,7 @@ def ver_followups():
 @app.route("/painel", methods=["GET"])
 def painel():
     """Painel visual da Mily"""
-    return send_file("painel_mily.html")
+    return send_file(os.path.join(os.path.dirname(__file__), "painel_mily.html"))
 
 
 @app.route("/health", methods=["GET"])
