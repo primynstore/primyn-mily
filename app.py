@@ -120,6 +120,11 @@ def painel():
 def health():
     return jsonify({"status": "healthy"}), 200
 
+@app.route("/test", methods=["POST"])
+def test_mily():
+    d = request.json
+    resp, handoff = processar_mensagem(d.get("phone", "test"), d.get("message", ""))
+    return jsonify({"resposta": resp, "dados": handoff})
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
