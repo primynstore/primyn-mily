@@ -14,7 +14,7 @@ from scheduler import iniciar_scheduler
 import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 iniciar_scheduler()
 
