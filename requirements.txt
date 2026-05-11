@@ -5,3 +5,4 @@ gspread==5.12.0
 google-auth==2.23.0
 fpdf2==2.7.6
 flask-cors
+google-generativeai>=0.7.0
