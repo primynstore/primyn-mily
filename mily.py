@@ -3,14 +3,18 @@
 # Compreensão via Google Gemini (gratuito)
 # ═══════════════════════════════════════════════
 
+
+        # ═══════════════════════════════════════════════
+# PRIMYN STUDIO — AGENTE MILY v4 (Claude Haiku)
+# Compreensão via Anthropic Claude Haiku
+# ═══════════════════════════════════════════════
+
 import json
 import os
 from datetime import datetime
-import google.generativeai as genai
+import anthropic
 
-# Chave via variável de ambiente GEMINI_API_KEY
-genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
-_model = genai.GenerativeModel("gemini-1.5-flash")
+_claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
 
 DB_FILE = "sessoes.json"
 
@@ -47,7 +51,7 @@ MSG_EDUCATIVA = (
 )
 
 # ═══════════════════════════════════════════════
-# INTERPRETAÇÃO VIA GEMINI
+# INTERPRETAÇÃO VIA CLAUDE HAIKU
 # ═══════════════════════════════════════════════
 
 def interpretar(mensagem: str, contexto: str, opcoes: list) -> str:
@@ -60,36 +64,63 @@ def interpretar(mensagem: str, contexto: str, opcoes: list) -> str:
         f"Responda APENAS com uma das opções, sem explicação."
     )
     try:
-        resp = _model.generate_content(prompt)
-        resultado = resp.text.strip().lower()
+        resp = _claude.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=20,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        resultado = resp.content[0].text.strip().lower()
         for op in opcoes:
             if op.lower() in resultado:
                 return op
         return opcoes[-1]
     except Exception as e:
-        print(f"[GEMINI] Erro: {e}")
+        print(f"[CLAUDE] Erro: {e}")
         return opcoes[-1]
 
 
-def extrair_nome(mensagem: str) -> str:
-    prompt = (
-        f"Extraia o nome completo (nome e sobrenome) da mensagem abaixo.\n"
-        f"Se houver nome e sobrenome, responda APENAS com 'Nome Sobrenome'.\n"
-        f"Se houver só primeiro nome ou nenhum nome, responda APENAS: INVALIDO\n"
-        f"Mensagem: \"{mensagem}\""
-    )
+def extrair_e_validar(mensagem: str, tipo: str) -> tuple:
+    """
+    Extrai e valida informações da mensagem.
+    tipo: 'nome', 'email'
+    Retorna (valido: bool, valor: str)
+    """
+    if tipo == "nome":
+        prompt = (
+            f"Extraia o nome completo (nome e sobrenome) da mensagem abaixo.\n"
+            f"Se houver nome E sobrenome válidos, responda: VALIDO: Nome Sobrenome\n"
+            f"Se houver só primeiro nome, apelido, ou nenhum nome, responda: INVALIDO\n"
+            f"Mensagem: \"{mensagem}\""
+        )
+    else:  # email
+        prompt = (
+            f"Verifique se a mensagem abaixo contém um endereço de e-mail válido.\n"
+            f"Um e-mail válido tem formato: texto@dominio.extensao (ex: ana@gmail.com)\n"
+            f"Se for válido, responda: VALIDO: o_email_extraido\n"
+            f"Se for inválido ou não for um e-mail, responda: INVALIDO\n"
+            f"Mensagem: \"{mensagem}\""
+        )
     try:
-        resp = _model.generate_content(prompt)
-        resultado = resp.text.strip()
-        if "INVALIDO" in resultado.upper() or len(resultado.split()) < 2:
-            return None
-        return resultado.title()
+        resp = _claude.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=50,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        resultado = resp.content[0].text.strip()
+        if resultado.upper().startswith("VALIDO:"):
+            valor = resultado.split(":", 1)[1].strip()
+            return True, valor.title() if tipo == "nome" else valor.lower()
+        return False, None
     except Exception as e:
-        print(f"[GEMINI NOME] Erro: {e}")
-        partes = [p for p in mensagem.strip().split() if len(p) > 1]
-        if len(partes) >= 2:
-            return " ".join(p.title() for p in partes)
-        return None
+        print(f"[CLAUDE VALIDAR] Erro: {e}")
+        # Fallback simples
+        if tipo == "nome":
+            partes = [p for p in mensagem.strip().split() if len(p) > 1]
+            if len(partes) >= 2:
+                return True, " ".join(p.title() for p in partes)
+        elif tipo == "email" and "@" in mensagem and "." in mensagem:
+            return True, mensagem.strip().lower()
+        return False, None
 
 
 # ═══════════════════════════════════════════════
@@ -136,14 +167,12 @@ def calcular_media(material, quantidade):
         else:                qtd_str = "1000"
     except:
         qtd_str = "250"
-
     m = (material or "").lower()
     if "couche" in m or "couchê" in m:    tier = "essencial"
     elif "black" in m or "notturno" in m: tier = "luxo_black"
     elif "white" in m or "rives" in m:    tier = "luxo_white"
     elif "450" in m or "prestigio" in m:  tier = "prestigio"
     else:                                  tier = "luxo_white"
-
     return PRECOS.get(qtd_str, {}).get(tier, 898)
 
 
@@ -173,7 +202,7 @@ def processar_mensagem(numero, mensagem):
     elif etapa == "triagem_inicial":
         intencao = interpretar(
             msg,
-            "O cliente está respondendo se já é cliente, se é a primeira vez, ou se já falou antes.",
+            "O cliente está respondendo se já é cliente da Primyn, se é a primeira vez, ou se já falou antes.",
             ["ja_sou_cliente", "primeira_vez", "ja_falei_antes"]
         )
         if intencao == "ja_sou_cliente":
@@ -204,17 +233,16 @@ def processar_mensagem(numero, mensagem):
         sessao["etapa"] = "nome"
 
     elif etapa == "nome":
-        nome_extraido = extrair_nome(msg)
-        if not nome_extraido:
+        valido, nome_extraido = extrair_e_validar(msg, "nome")
+        if not valido:
             resposta = (
-                "Para encontrar seu cadastro com precisão, preciso do seu nome e sobrenome completo. "
+                "Para encontrar seu cadastro com precisão, preciso do seu nome e sobrenome completo. 😊 "
                 "Como posso te chamar?"
             )
         else:
             dados["nome"] = nome_extraido
             primeiro = nome_extraido.split()[0]
             fluxo = sessao.get("fluxo")
-
             if fluxo == "cliente_recorrente":
                 resposta = (
                     f"Perfeito, {primeiro} 😊 Já te localizo aqui no sistema.\n\n"
@@ -240,6 +268,22 @@ def processar_mensagem(numero, mensagem):
         )
         sessao["etapa"] = "email"
 
+    elif etapa == "email":
+        valido, email_extraido = extrair_e_validar(msg, "email")
+        if not valido:
+            resposta = (
+                "Hmm, esse e-mail não parece válido 😊 "
+                "Pode me passar seu endereço completo? Ex: seunome@gmail.com"
+            )
+        else:
+            dados["email"] = email_extraido
+            primeiro = dados.get("nome", "").split()[0]
+            resposta = (
+                f"Perfeito, {primeiro} ✨ Qual projeto você gostaria de produzir? "
+                f"Cartão de visita, papel timbrado, papelaria completa, convite ou outro material?"
+            )
+            sessao["etapa"] = "produto"
+
     elif etapa == "retomar_ou_novo":
         primeiro = dados.get("nome", "").split()[0]
         intencao = interpretar(
@@ -264,15 +308,6 @@ def processar_mensagem(numero, mensagem):
             sessao["etapa"] = "handoff"
             handoff_data = dados
 
-    elif etapa == "email":
-        dados["email"] = msg.strip()
-        primeiro = dados.get("nome", "").split()[0]
-        resposta = (
-            f"Perfeito, {primeiro} ✨ Qual projeto você gostaria de produzir? "
-            f"Cartão de visita, papel timbrado, papelaria completa, convite ou outro material?"
-        )
-        sessao["etapa"] = "produto"
-
     elif etapa == "produto":
         dados["produto"] = msg
         primeiro = dados.get("nome", "").split()[0]
@@ -291,7 +326,6 @@ def processar_mensagem(numero, mensagem):
 
     elif etapa == "area":
         dados["area"] = msg
-        primeiro = dados.get("nome", "").split()[0]
         for chave, valor in PAPEIS_POR_AREA.items():
             if chave in msg.lower():
                 dados["papel_recomendado"] = valor
@@ -307,7 +341,7 @@ def processar_mensagem(numero, mensagem):
         primeiro = dados.get("nome", "").split()[0]
         intencao = interpretar(
             msg,
-            "O cliente está respondendo sobre a arte do projeto gráfico.",
+            "O cliente responde sobre a arte do projeto: se já tem arte pronta/referência, se precisa criar do zero, ou se quer identidade visual/logomarca.",
             ["arte_pronta", "precisa_criacao", "identidade_visual"]
         )
         if intencao == "arte_pronta":
@@ -349,22 +383,28 @@ def processar_mensagem(numero, mensagem):
             sessao["etapa"] = "arte_opcao"
 
     elif etapa == "email_design":
-        dados["email"] = msg.strip()
-        primeiro = dados.get("nome", "").split()[0]
-        dados["status"] = "handoff_designer"
-        resposta = (
-            f"Perfeito, {primeiro} ✨ Ane entrará em contato em breve.\n\n"
-            f"{MSG_EDUCATIVA}\n\n"
-            f"Foi um prazer te atender! 😊"
-        )
-        sessao["etapa"] = "handoff"
-        handoff_data = dados
+        valido, email_extraido = extrair_e_validar(msg, "email")
+        if not valido:
+            resposta = (
+                "Pode me passar seu e-mail completo? 😊 Ex: seunome@gmail.com"
+            )
+        else:
+            dados["email"] = email_extraido
+            primeiro = dados.get("nome", "").split()[0]
+            dados["status"] = "handoff_designer"
+            resposta = (
+                f"Perfeito, {primeiro} ✨ Ane entrará em contato em breve.\n\n"
+                f"{MSG_EDUCATIVA}\n\n"
+                f"Foi um prazer te atender! 😊"
+            )
+            sessao["etapa"] = "handoff"
+            handoff_data = dados
 
     elif etapa == "arte_opcao":
         primeiro = dados.get("nome", "").split()[0]
         intencao = interpretar(
             msg,
-            "O cliente escolhe entre criação de arte simples (R$74,90), cartão 3D (R$120) ou identidade visual.",
+            "O cliente escolhe entre criação de arte simples (R$74,90), cartão 3D (R$120) ou identidade visual/logomarca.",
             ["criacao_simples", "cartao_3d", "identidade_visual"]
         )
         if intencao == "identidade_visual":
@@ -481,7 +521,7 @@ def processar_mensagem(numero, mensagem):
         primeiro = dados.get("nome", "").split()[0]
         intencao = interpretar(
             msg,
-            "O cliente responde se quer prosseguir com a proposta.",
+            "O cliente responde se quer prosseguir com a proposta personalizada.",
             ["sim_quero", "precisa_pensar", "nao_quero"]
         )
         if intencao == "sim_quero":
