@@ -1,24 +1,25 @@
 # ═══════════════════════════════════════════════
-# PRIMYN — AGENTE MILY (Lógica) v2
-# Correções: fluxo cliente recorrente, validação
-# nome+sobrenome, finalização elegante educativa,
-# identidade visual trava corrigida.
+# PRIMYN STUDIO — AGENTE MILY v4 (Gemini NLU)
+# Compreensão via Google Gemini (gratuito)
 # ═══════════════════════════════════════════════
 
 import json
 import os
 from datetime import datetime
+import google.generativeai as genai
+
+# Chave via variável de ambiente GEMINI_API_KEY
+genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
+_model = genai.GenerativeModel("gemini-1.5-flash")
 
 DB_FILE = "sessoes.json"
 
-# ═══ TABELA DE PREÇOS ═══
 PRECOS = {
     "250":  {"essencial": 378,  "luxo_black": 562,  "luxo_white": 898,  "prestigio": 1297},
     "500":  {"essencial": 475,  "luxo_black": 839,  "luxo_white": 1284, "prestigio": 1682},
     "1000": {"essencial": 588,  "luxo_black": 1184, "luxo_white": 1568, "prestigio": 2567}
 }
 
-# ═══ PAPÉIS POR ÁREA ═══
 PAPEIS_POR_AREA = {
     "advocacia":   "Notturno Black 450g / Dark Blue / Rives White",
     "direito":     "Notturno Black 450g / Dark Blue / Rives White",
@@ -34,11 +35,8 @@ PAPEIS_POR_AREA = {
     "saude":       "Rives Trad. White / Conqueror Bamboo 400g"
 }
 
-# ═══ MENSAGEM DE FINALIZAÇÃO EDUCATIVA ═══
-# Usada no handoff e na retomada de lead antigo.
-# Ensina o cliente sobre o valor da papelaria premium na percepção da marca.
 MSG_EDUCATIVA = (
-    "✦ Antes de encerrarmos, um pensamento que vale levar:\n\n"
+    "👑 Antes de encerrarmos, um pensamento que vale levar:\n\n"
     "Materiais de papelaria premium não são apenas papel — eles são o primeiro toque "
     "físico que o seu cliente tem com a sua marca. Um cartão com textura, acabamento "
     "em hot stamping ou baixo relevo transmite sofisticação antes mesmo de qualquer "
@@ -47,6 +45,56 @@ MSG_EDUCATIVA = (
     "Você não entrega um cartão — você entrega uma experiência.\n\n"
     "Sua marca merece deixar essa impressão. 🤍"
 )
+
+# ═══════════════════════════════════════════════
+# INTERPRETAÇÃO VIA GEMINI
+# ═══════════════════════════════════════════════
+
+def interpretar(mensagem: str, contexto: str, opcoes: list) -> str:
+    opcoes_str = " | ".join(opcoes)
+    prompt = (
+        f"Você é um classificador de intenção para atendimento em português.\n"
+        f"Contexto: {contexto}\n"
+        f"Mensagem do cliente: \"{mensagem}\"\n"
+        f"Classifique em UMA opção: {opcoes_str}\n"
+        f"Responda APENAS com uma das opções, sem explicação."
+    )
+    try:
+        resp = _model.generate_content(prompt)
+        resultado = resp.text.strip().lower()
+        for op in opcoes:
+            if op.lower() in resultado:
+                return op
+        return opcoes[-1]
+    except Exception as e:
+        print(f"[GEMINI] Erro: {e}")
+        return opcoes[-1]
+
+
+def extrair_nome(mensagem: str) -> str:
+    prompt = (
+        f"Extraia o nome completo (nome e sobrenome) da mensagem abaixo.\n"
+        f"Se houver nome e sobrenome, responda APENAS com 'Nome Sobrenome'.\n"
+        f"Se houver só primeiro nome ou nenhum nome, responda APENAS: INVALIDO\n"
+        f"Mensagem: \"{mensagem}\""
+    )
+    try:
+        resp = _model.generate_content(prompt)
+        resultado = resp.text.strip()
+        if "INVALIDO" in resultado.upper() or len(resultado.split()) < 2:
+            return None
+        return resultado.title()
+    except Exception as e:
+        print(f"[GEMINI NOME] Erro: {e}")
+        partes = [p for p in mensagem.strip().split() if len(p) > 1]
+        if len(partes) >= 2:
+            return " ".join(p.title() for p in partes)
+        return None
+
+
+# ═══════════════════════════════════════════════
+# SESSÕES
+# ═══════════════════════════════════════════════
 
 def carregar_sessoes():
     if os.path.exists(DB_FILE):
@@ -79,61 +127,38 @@ def atualizar_sessao(numero, sessao):
     sessoes[numero] = sessao
     salvar_sessoes(sessoes)
 
-def validar_nome_completo(msg):
-    """
-    Valida que o cliente forneceu pelo menos nome e sobrenome.
-    Retorna (True, nome_formatado) ou (False, None).
-    """
-    partes = msg.strip().split()
-    partes = [p for p in partes if len(p) > 1]  # remove iniciais soltas tipo "J"
-    if len(partes) >= 2:
-        return True, " ".join(p.title() for p in partes)
-    return False, None
-
 def calcular_media(material, quantidade):
     qtd_str = "250"
     try:
         qtd_num = int(''.join(filter(str.isdigit, str(quantidade))))
-        if qtd_num <= 375:
-            qtd_str = "250"
-        elif qtd_num <= 750:
-            qtd_str = "500"
-        else:
-            qtd_str = "1000"
+        if qtd_num <= 375:   qtd_str = "250"
+        elif qtd_num <= 750: qtd_str = "500"
+        else:                qtd_str = "1000"
     except:
         qtd_str = "250"
 
-    material_lower = (material or "").lower()
-    if "couche" in material_lower or "couchê" in material_lower:
-        tier = "essencial"
-    elif "black" in material_lower or "preto" in material_lower or "notturno" in material_lower:
-        tier = "luxo_black"
-    elif "white" in material_lower or "branco" in material_lower or "rives" in material_lower:
-        tier = "luxo_white"
-    elif "prestigio" in material_lower or "prestígio" in material_lower or "450" in material_lower:
-        tier = "prestigio"
-    else:
-        tier = "luxo_white"
+    m = (material or "").lower()
+    if "couche" in m or "couchê" in m:    tier = "essencial"
+    elif "black" in m or "notturno" in m: tier = "luxo_black"
+    elif "white" in m or "rives" in m:    tier = "luxo_white"
+    elif "450" in m or "prestigio" in m:  tier = "prestigio"
+    else:                                  tier = "luxo_white"
 
     return PRECOS.get(qtd_str, {}).get(tier, 898)
 
 
+# ═══════════════════════════════════════════════
+# PROCESSAMENTO PRINCIPAL
+# ═══════════════════════════════════════════════
+
 def processar_mensagem(numero, mensagem):
-    """
-    Processa mensagem e retorna (resposta_texto, handoff_data_ou_none).
-    """
-    sessao  = obter_sessao(numero)
-    etapa   = sessao["etapa"]
-    dados   = sessao["dados"]
-    fluxo   = sessao.get("fluxo")
-    msg     = mensagem.strip()
-    msg_lower = msg.lower()
-    resposta    = ""
+    sessao       = obter_sessao(numero)
+    etapa        = sessao["etapa"]
+    dados        = sessao["dados"]
+    msg          = mensagem.strip()
+    resposta     = ""
     handoff_data = None
 
-    # ═══════════════════════════════════════════
-    # ABERTURA
-    # ═══════════════════════════════════════════
     if etapa == "abertura":
         resposta = (
             "😊 Olá! Seja muito bem-vindo(a) à Primyn.\n\n"
@@ -143,37 +168,32 @@ def processar_mensagem(numero, mensagem):
             "fique exatamente como você imagina.\n\n"
             "Para começarmos, você é cliente da Primyn ou é sua primeira vez por aqui?"
         )
-        # ↑ CORREÇÃO BUG 1: primeira pergunta é triagem de perfil,
-        # NÃO "como você nos conheceu". Origem só faz sentido para novos leads.
         sessao["etapa"] = "triagem_inicial"
 
-    # ═══════════════════════════════════════════
-    # TRIAGEM INICIAL (antes do nome)
-    # ═══════════════════════════════════════════
     elif etapa == "triagem_inicial":
-        if any(p in msg_lower for p in ["já sou", "ja sou", "cliente", "já comprei", "ja comprei", "compro", "sou cliente"]):
+        intencao = interpretar(
+            msg,
+            "O cliente está respondendo se já é cliente, se é a primeira vez, ou se já falou antes.",
+            ["ja_sou_cliente", "primeira_vez", "ja_falei_antes"]
+        )
+        if intencao == "ja_sou_cliente":
             dados["tipo_contato"] = "cliente_recorrente"
             dados["origem_relacional"] = "recompra"
             sessao["fluxo"] = "cliente_recorrente"
             resposta = (
-                "Que bom te ver de volta! ✨\n\n"
+                "Que bom te ver de volta! 😊\n\n"
                 "Para localizar seu cadastro e agilizar seu novo pedido, "
                 "pode me informar seu nome e sobrenome completo?"
             )
-            sessao["etapa"] = "nome"
-
-        elif any(p in msg_lower for p in ["já falei", "ja falei", "voltei", "retomando", "retomar", "antes", "já conversei", "ja conversei", "já fui", "ja fui"]):
+        elif intencao == "ja_falei_antes":
             dados["tipo_contato"] = "lead_antigo"
             dados["origem_relacional"] = "retorno"
             sessao["fluxo"] = "lead_antigo"
             resposta = (
-                "Que bom que voltou! ✨ Fico feliz em retomar seu atendimento.\n\n"
+                "Que bom que voltou! 😊\n\n"
                 "Para localizar seu histórico, pode me dizer seu nome e sobrenome completo?"
             )
-            sessao["etapa"] = "nome"
-
         else:
-            # Novo lead — primeiro nome, depois origem
             dados["tipo_contato"] = "novo_lead"
             dados["origem_relacional"] = "primeira_vez"
             sessao["fluxo"] = "novo_lead"
@@ -181,374 +201,303 @@ def processar_mensagem(numero, mensagem):
                 "Seja muito bem-vindo(a)! ✨ "
                 "Para personalizarmos seu atendimento, pode me dizer seu nome e sobrenome completo?"
             )
-            sessao["etapa"] = "nome"
+        sessao["etapa"] = "nome"
 
-    # ═══════════════════════════════════════════
-    # NOME (com validação nome + sobrenome)
-    # ═══════════════════════════════════════════
     elif etapa == "nome":
-        valido, nome_formatado = validar_nome_completo(msg)
-
-        if not valido:
-            # ↑ CORREÇÃO BUG 2: rejeita nome único, pede nome + sobrenome
+        nome_extraido = extrair_nome(msg)
+        if not nome_extraido:
             resposta = (
                 "Para encontrar seu cadastro com precisão, preciso do seu nome e sobrenome completo. "
                 "Como posso te chamar?"
             )
         else:
-            dados["nome"] = nome_formatado
-            primeiro_nome = nome_formatado.split()[0]
-            fluxo_atual = sessao.get("fluxo")
+            dados["nome"] = nome_extraido
+            primeiro = nome_extraido.split()[0]
+            fluxo = sessao.get("fluxo")
 
-            if fluxo_atual == "cliente_recorrente":
-                # Lead quente: pula direto para o produto
+            if fluxo == "cliente_recorrente":
                 resposta = (
-                    f"Perfeito, {primeiro_nome} ✦ Já te localizo aqui no sistema.\n\n"
+                    f"Perfeito, {primeiro} 😊 Já te localizo aqui no sistema.\n\n"
                     f"Me conta: qual material você gostaria de produzir desta vez?"
                 )
                 sessao["etapa"] = "produto"
-
-            elif fluxo_atual == "lead_antigo":
+            elif fluxo == "lead_antigo":
                 resposta = (
-                    f"Ótimo, {primeiro_nome} ✨ Encontrei seu histórico.\n\n"
-                    f"Você prefere retomar o projeto que conversamos antes "
-                    f"ou está pensando em algo novo desta vez?"
+                    f"Ótimo, {primeiro} 😊 Encontrei seu histórico.\n\n"
+                    f"Você prefere retomar o projeto anterior ou começar algo novo?"
                 )
                 sessao["etapa"] = "retomar_ou_novo"
-
             else:
-                # Novo lead: agora sim perguntar origem
-                resposta = (
-                    f"Prazer, {primeiro_nome}! ✨ "
-                    f"Como você conheceu a Primyn?"
-                )
+                resposta = f"Prazer, {primeiro}! ✨ Como você conheceu a Primyn?"
                 sessao["etapa"] = "origem"
 
-    # ═══════════════════════════════════════════
-    # ORIGEM (só para novos leads)
-    # ═══════════════════════════════════════════
     elif etapa == "origem":
         dados["origem"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
+        primeiro = dados.get("nome", "").split()[0]
         resposta = (
-            f"Que ótimo que nos encontrou por lá! ✦\n\n"
-            f"Para que eu possa encaminhar sua proposta de investimento, "
-            f"qual é o seu melhor e-mail, {primeiro_nome}?"
+            f"Que ótimo que nos encontrou por lá! 🚀\n\n"
+            f"Qual é o seu melhor e-mail, {primeiro}?"
         )
         sessao["etapa"] = "email"
 
-    # ═══════════════════════════════════════════
-    # RETOMAR OU NOVO (lead antigo)
-    # ═══════════════════════════════════════════
     elif etapa == "retomar_ou_novo":
-        primeiro_nome = dados.get("nome", "").split()[0]
-
-        if any(p in msg_lower for p in ["novo", "nova", "diferente", "outro", "outra", "começar"]):
+        primeiro = dados.get("nome", "").split()[0]
+        intencao = interpretar(
+            msg,
+            "O cliente quer retomar projeto anterior ou começar projeto novo.",
+            ["retomar", "novo_projeto"]
+        )
+        if intencao == "novo_projeto":
             sessao["fluxo"] = "novo_lead"
             resposta = (
-                f"Perfeito, {primeiro_nome} ✨ Vamos começar algo novo e especial!\n\n"
-                f"Para encaminhar sua proposta, qual é o seu melhor e-mail?"
+                f"Perfeito, {primeiro} ✨ Vamos começar algo novo!\n\n"
+                f"Qual é o seu melhor e-mail?"
             )
             sessao["etapa"] = "email"
-
         else:
-            # Retomada: finalização elegante + educativa
-            # ↑ CORREÇÃO BUG 3: resposta elaborada e educativa antes do handoff
             resposta = (
-                f"Perfeito, {primeiro_nome} ✦ Vou retomar exatamente de onde paramos "
-                f"e garantir que sua proposta reflita tudo o que conversamos.\n\n"
+                f"Perfeito, {primeiro} 👑 Vou retomar exatamente de onde paramos.\n\n"
                 f"{MSG_EDUCATIVA}\n\n"
-                f"Em breve um especialista dará continuidade ao seu atendimento com todo o contexto do projeto. 😊"
+                f"Em breve um especialista dará continuidade. 😊"
             )
             dados["status"] = "handoff"
             sessao["etapa"] = "handoff"
             handoff_data = dados
 
-    # ═══════════════════════════════════════════
-    # E-MAIL
-    # ═══════════════════════════════════════════
     elif etapa == "email":
         dados["email"] = msg.strip()
-        primeiro_nome = dados.get("nome", "").split()[0]
+        primeiro = dados.get("nome", "").split()[0]
         resposta = (
-            f"Perfeito, {primeiro_nome} ✨ Agora me conta: qual projeto você gostaria de produzir? "
-            f"Um cartão de visita premium, papel timbrado, papelaria completa, "
-            f"um convite especial ou outro material?"
+            f"Perfeito, {primeiro} ✨ Qual projeto você gostaria de produzir? "
+            f"Cartão de visita, papel timbrado, papelaria completa, convite ou outro material?"
         )
         sessao["etapa"] = "produto"
 
-    # ═══════════════════════════════════════════
-    # PRODUTO
-    # ═══════════════════════════════════════════
     elif etapa == "produto":
         dados["produto"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
-        fluxo_atual = sessao.get("fluxo")
-
-        # Cliente recorrente pula área de atuação e vai direto para arte
-        if fluxo_atual == "cliente_recorrente":
+        primeiro = dados.get("nome", "").split()[0]
+        if sessao.get("fluxo") == "cliente_recorrente":
             resposta = (
-                f"Ótima escolha, {primeiro_nome} ✦ "
+                f"Ótima escolha, {primeiro} 👑 "
                 f"Você já tem a arte pronta ou precisa que a gente desenvolva algo novo?"
             )
             sessao["etapa"] = "arte"
         else:
             resposta = (
-                f"Ótima escolha, {primeiro_nome} ✨ "
-                f"Para indicar o material mais alinhado à sua marca, me conta: em qual área você atua?"
+                f"Ótima escolha, {primeiro} ✨ "
+                f"Em qual área você atua?"
             )
             sessao["etapa"] = "area"
 
-    # ═══════════════════════════════════════════
-    # ÁREA DE ATUAÇÃO
-    # ═══════════════════════════════════════════
     elif etapa == "area":
         dados["area"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
-
-        papel_recomendado = None
+        primeiro = dados.get("nome", "").split()[0]
         for chave, valor in PAPEIS_POR_AREA.items():
-            if chave in msg_lower:
-                papel_recomendado = valor
+            if chave in msg.lower():
+                dados["papel_recomendado"] = valor
                 break
-        if papel_recomendado:
-            dados["papel_recomendado"] = papel_recomendado
-
         resposta = (
-            f"{msg.title()} — uma área que exige sofisticação em cada detalhe. "
-            f"Sua marca merece um material à altura do seu trabalho. ✦\n\n"
-            f"Você já possui a arte finalizada, tem alguma referência em mente "
+            f"{msg.title()} — uma área que exige sofisticação em cada detalhe. 👑\n\n"
+            f"Você já possui a arte finalizada, tem alguma referência "
             f"ou vai precisar de criação?"
         )
         sessao["etapa"] = "arte"
 
-    # ═══════════════════════════════════════════
-    # ARTE
-    # ═══════════════════════════════════════════
     elif etapa == "arte":
-        primeiro_nome = dados.get("nome", "").split()[0]
-
-        if any(p in msg_lower for p in ["pronta", "tenho", "já tenho", "ja tenho", "finalizada", "referência", "referencia", "envio"]):
+        primeiro = dados.get("nome", "").split()[0]
+        intencao = interpretar(
+            msg,
+            "O cliente está respondendo sobre a arte do projeto gráfico.",
+            ["arte_pronta", "precisa_criacao", "identidade_visual"]
+        )
+        if intencao == "arte_pronta":
             dados["arte"] = "pronta_ou_referencia"
             resposta = (
-                f"Perfeito, {primeiro_nome} ✨ Pode me enviar sua arte final ou a referência que deseja usar? "
+                f"Perfeito, {primeiro} ✨ Pode me enviar sua arte ou referência? "
                 f"Assim consigo direcionar sua cotação com mais precisão."
             )
             sessao["etapa"] = "arte_detalhe"
-
-        elif any(p in msg_lower for p in ["criação", "criacao", "criar", "não tenho", "nao tenho", "preciso", "desenvolver"]):
-            dados["arte"] = "precisa_criacao"
-            resposta = (
-                f"Sem problema, {primeiro_nome} ✨ Podemos desenvolver isso para você. Trabalhamos com:\n\n"
-                f"• Criação de arte — R$ 74,90\n"
-                f"• Criação de cartão 3D — R$ 120,00\n"
-                f"• Identidade visual / logomarca\n\n"
-                f"Qual dessas opções faz mais sentido para o seu projeto?"
-            )
-            sessao["etapa"] = "arte_opcao"
-
-        elif any(p in msg_lower for p in ["identidade", "logo", "logomarca", "marca"]):
+        elif intencao == "identidade_visual":
             dados["arte"] = "identidade_visual"
             dados["criacao"] = "identidade_visual"
             dados["valor_criacao"] = 0
-            resposta = (
-                f"Perfeito, {primeiro_nome} ✨ Identidade visual é um projeto especial — "
-                f"vou encaminhar diretamente para a nossa designer Ane, "
-                f"que vai te atender com toda a atenção que esse projeto merece. ✦\n\n"
-                f"Antes, me passa seu melhor e-mail para ela entrar em contato?"
-                if not dados.get("email") else
-                f"Perfeito, {primeiro_nome} ✨ Identidade visual é um projeto especial — "
-                f"vou encaminhar diretamente para a nossa designer Ane, "
-                f"que vai te atender com toda a atenção que esse projeto merece.\n\n"
-                f"{MSG_EDUCATIVA}\n\n"
-                f"Em breve ela entrará em contato no seu e-mail cadastrado. 😊"
-            )
             if dados.get("email"):
+                resposta = (
+                    f"Perfeito, {primeiro} 👑 Identidade visual é um projeto especial — "
+                    f"vou encaminhar para a nossa designer Ane.\n\n"
+                    f"{MSG_EDUCATIVA}\n\n"
+                    f"Em breve ela entrará em contato. 😊"
+                )
                 dados["status"] = "handoff_designer"
                 sessao["etapa"] = "handoff"
                 handoff_data = dados
             else:
+                resposta = (
+                    f"Perfeito, {primeiro} 👑 Vou encaminhar para a nossa designer Ane. "
+                    f"Qual é o seu melhor e-mail?"
+                )
                 sessao["etapa"] = "email_design"
-
         else:
+            dados["arte"] = "precisa_criacao"
             resposta = (
-                f"{primeiro_nome}, me ajuda a entender melhor: você já tem a arte pronta, "
-                f"tem alguma referência visual ou prefere que a gente desenvolva para você?"
+                f"Sem problema, {primeiro} 🚀 Podemos desenvolver para você:\n\n"
+                f"• Criação de arte — R$ 74,90\n"
+                f"• Criação de cartão 3D — R$ 120,00\n"
+                f"• Identidade visual / logomarca\n\n"
+                f"Qual faz mais sentido para o seu projeto?"
             )
+            sessao["etapa"] = "arte_opcao"
 
-    # ═══════════════════════════════════════════
-    # EMAIL DESIGN (identidade sem e-mail ainda)
-    # ═══════════════════════════════════════════
     elif etapa == "email_design":
         dados["email"] = msg.strip()
-        primeiro_nome = dados.get("nome", "").split()[0]
+        primeiro = dados.get("nome", "").split()[0]
         dados["status"] = "handoff_designer"
         resposta = (
-            f"Perfeito, {primeiro_nome} ✨ Ane entrará em contato pelo e-mail informado em breve.\n\n"
+            f"Perfeito, {primeiro} ✨ Ane entrará em contato em breve.\n\n"
             f"{MSG_EDUCATIVA}\n\n"
             f"Foi um prazer te atender! 😊"
         )
         sessao["etapa"] = "handoff"
         handoff_data = dados
 
-    # ═══════════════════════════════════════════
-    # ARTE OPÇÃO (escolha após listar as opções)
-    # ═══════════════════════════════════════════
     elif etapa == "arte_opcao":
-        primeiro_nome = dados.get("nome", "").split()[0]
-
-        if "identidade" in msg_lower or "logo" in msg_lower or "logomarca" in msg_lower:
+        primeiro = dados.get("nome", "").split()[0]
+        intencao = interpretar(
+            msg,
+            "O cliente escolhe entre criação de arte simples (R$74,90), cartão 3D (R$120) ou identidade visual.",
+            ["criacao_simples", "cartao_3d", "identidade_visual"]
+        )
+        if intencao == "identidade_visual":
             dados["criacao"] = "identidade_visual"
             dados["valor_criacao"] = 0
             resposta = (
-                f"Perfeito, {primeiro_nome} ✨ Vou encaminhar para a nossa designer Ane — "
-                f"ela cuida pessoalmente de identidades visuais.\n\n"
+                f"Perfeito, {primeiro} 👑 Vou encaminhar para a nossa designer Ane.\n\n"
                 f"{MSG_EDUCATIVA}\n\n"
                 f"Em breve ela entrará em contato. 😊"
             )
             dados["status"] = "handoff_designer"
             sessao["etapa"] = "handoff"
             handoff_data = dados
-        elif "120" in msg or "3d" in msg_lower:
+        elif intencao == "cartao_3d":
             dados["criacao"] = "cartao_3d"
             dados["valor_criacao"] = 120.00
+            resposta = f"Ótima escolha! 🚀 Qual formato? 5x9 cm, 5x8 cm ou personalizado?"
             sessao["etapa"] = "arte_detalhe"
-            resposta = f"Ótima escolha! ✦ Agora me conta: qual formato você gostaria? 5x9 cm, 5x8 cm ou personalizado?"
         else:
             dados["criacao"] = "criacao_arte"
             dados["valor_criacao"] = 74.90
+            resposta = f"Perfeito 😊 Qual formato? 5x9 cm (tradicional), 5x8 cm (americano) ou personalizado?"
             sessao["etapa"] = "arte_detalhe"
-            resposta = f"Perfeito ✦ Qual formato você gostaria? 5x9 cm (tradicional), 5x8 cm (americano) ou personalizado?"
 
-    # ═══════════════════════════════════════════
-    # ARTE DETALHE (arte enviada ou confirmação)
-    # ═══════════════════════════════════════════
     elif etapa == "arte_detalhe":
-        # ↑ CORREÇÃO BUG 4: etapa sempre avança após qualquer resposta
         dados["arte_detalhe"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
+        primeiro = dados.get("nome", "").split()[0]
         resposta = (
-            f"Perfeito, {primeiro_nome} ✦ Qual formato você gostaria para o seu projeto? "
-            f"Se for cartão de visita: 5x9 cm (tradicional), 5x8 cm (americano) ou formato personalizado?"
+            f"Perfeito, {primeiro} 😊 Qual formato para o seu projeto? "
+            f"5x9 cm (tradicional), 5x8 cm (americano) ou personalizado?"
         )
         sessao["etapa"] = "formato"
 
-    # ═══════════════════════════════════════════
-    # FORMATO
-    # ═══════════════════════════════════════════
     elif etapa == "formato":
         dados["formato"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
         resposta = (
-            f"Perfeito ✨ Qual tipo de papel faz mais sentido para o seu projeto: "
+            f"Perfeito ✨ Qual papel faz mais sentido: "
             f"Couchê 300g, texturado até 400g ou texturado acima de 400g?"
         )
         sessao["etapa"] = "papel"
 
-    # ═══════════════════════════════════════════
-    # PAPEL / MATERIAL
-    # ═══════════════════════════════════════════
     elif etapa == "papel":
         dados["material"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
-
-        if "couche" in msg_lower or "couchê" in msg_lower or "300" in msg:
+        primeiro = dados.get("nome", "").split()[0]
+        if "couche" in msg.lower() or "couchê" in msg.lower() or "300" in msg:
             resposta = (
-                f"O Couchê 300g é nossa opção de entrada — e, para refletir o padrão Primyn, "
-                f"trabalhamos obrigatoriamente com hot stamping ou baixo relevo. "
-                f"Sem um acabamento premium, ele se torna um cartão comum, "
-                f"e isso não representa a sua marca da forma certa. ✦\n\n"
-                f"Qual acabamento faz mais sentido para você, ou prefere explorar nossos papéis texturados?"
+                f"O Couchê 300g é nossa opção de entrada — e para refletir o padrão Primyn, "
+                f"trabalhamos com hot stamping ou baixo relevo obrigatoriamente. 👑\n\n"
+                f"Qual acabamento prefere, ou quer explorar nossos papéis texturados?"
             )
             sessao["etapa"] = "papel_couche_validar"
         else:
             resposta = (
-                f"Perfeito, {primeiro_nome} ✨ E em relação ao acabamento, o que faz mais sentido para a sua marca?\n\n"
+                f"Perfeito, {primeiro} ✨ Qual acabamento faz mais sentido:\n\n"
                 f"• Hot stamping\n"
                 f"• Alto relevo seco\n"
                 f"• Baixo relevo\n"
                 f"• Empastamento / borda sanduíche\n"
-                f"• Apenas impressão colorida no papel especial\n"
+                f"• Impressão colorida no papel especial\n"
                 f"• Combinação de acabamentos"
             )
             sessao["etapa"] = "acabamento"
 
-    # ═══════════════════════════════════════════
-    # VALIDAÇÃO COUCHÊ
-    # ═══════════════════════════════════════════
     elif etapa == "papel_couche_validar":
-        primeiro_nome = dados.get("nome", "").split()[0]
-
-        if any(p in msg_lower for p in ["texturado", "textura", "explorar", "outro"]):
+        primeiro = dados.get("nome", "").split()[0]
+        intencao = interpretar(
+            msg,
+            "O cliente responde sobre acabamento do Couchê 300g.",
+            ["quer_texturado", "recusa_acabamento", "escolheu_acabamento"]
+        )
+        if intencao == "quer_texturado":
             dados["material"] = "texturado"
-            resposta = f"Perfeito, {primeiro_nome} ✨ Você prefere texturado até 400g ou acima de 400g?"
+            resposta = f"Perfeito, {primeiro} ✨ Texturado até 400g ou acima de 400g?"
             sessao["etapa"] = "papel"
-        elif any(p in msg_lower for p in ["sem", "não quero", "nao quero", "sem acabamento"]):
+        elif intencao == "recusa_acabamento":
             resposta = (
-                f"Entendemos perfeitamente, {primeiro_nome}. "
-                f"Quando quiser explorar uma proposta alinhada ao padrão premium da Primyn, estaremos por aqui ✦"
+                f"Entendemos, {primeiro}. "
+                f"Quando quiser explorar uma proposta premium, estaremos por aqui 😊"
             )
             dados["status"] = "fora_escopo"
             sessao["etapa"] = "encerrado"
         else:
             dados["acabamento"] = msg
-            resposta = f"Perfeito, {primeiro_nome} ✨ Qual quantidade você está considerando para esse projeto?"
+            resposta = f"Perfeito, {primeiro} ✨ Qual quantidade você está considerando?"
             sessao["etapa"] = "quantidade"
 
-    # ═══════════════════════════════════════════
-    # ACABAMENTO
-    # ═══════════════════════════════════════════
     elif etapa == "acabamento":
         dados["acabamento"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
-        resposta = f"Perfeito, {primeiro_nome} ✨ Qual quantidade você está considerando para esse projeto?"
+        primeiro = dados.get("nome", "").split()[0]
+        resposta = f"Perfeito, {primeiro} ✨ Qual quantidade você está considerando?"
         sessao["etapa"] = "quantidade"
 
-    # ═══════════════════════════════════════════
-    # QUANTIDADE
-    # ═══════════════════════════════════════════
     elif etapa == "quantidade":
         dados["quantidade"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
-
+        primeiro = dados.get("nome", "").split()[0]
         try:
             media = calcular_media(dados.get("material", ""), msg)
         except:
             media = 898
-
         valor_criacao = dados.get("valor_criacao", 0)
         if valor_criacao:
             media += valor_criacao
-
         dados["media"] = media
-
         media_fmt = f"R$ {media:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
         resposta = (
-            f"Perfeito, {primeiro_nome} ✨ Para a configuração que você me passou, "
+            f"Perfeito, {primeiro} 🚀 Para a configuração que você me passou, "
             f"o investimento médio fica em torno de {media_fmt}. "
-            f"Esse valor é uma referência e o orçamento final é personalizado conforme "
-            f"material, acabamento, criação e complexidade do projeto. ✦\n\n"
-            f"A ideia é que sua papelaria não apenas informe, mas valorize a percepção "
-            f"da sua marca desde o primeiro contato.\n\n"
-            f"Faz sentido para você prosseguirmos com uma proposta personalizada?"
+            f"O orçamento final é personalizado conforme material, acabamento e complexidade. 👑\n\n"
+            f"Faz sentido prosseguirmos com uma proposta personalizada?"
         )
         sessao["etapa"] = "media_proposta"
 
-    # ═══════════════════════════════════════════
-    # MÉDIA / PROPOSTA
-    # ═══════════════════════════════════════════
     elif etapa == "media_proposta":
-        primeiro_nome = dados.get("nome", "").split()[0]
-
-        if any(p in msg_lower for p in ["sim", "faz", "sentido", "quero", "vamos", "pode", "ok", "claro", "s", "isso"]):
-            resposta = f"Perfeito ✨ Você tem algum prazo ou data importante para receber esse material?"
+        primeiro = dados.get("nome", "").split()[0]
+        intencao = interpretar(
+            msg,
+            "O cliente responde se quer prosseguir com a proposta.",
+            ["sim_quero", "precisa_pensar", "nao_quero"]
+        )
+        if intencao == "sim_quero":
+            resposta = f"Perfeito ✨ Você tem algum prazo importante para receber esse material?"
             sessao["etapa"] = "urgencia"
-
-        elif any(p in msg_lower for p in ["pensar", "depois", "calma", "ainda não", "ainda nao", "talvez"]):
+        elif intencao == "nao_quero":
             resposta = (
-                f"Claro, {primeiro_nome} ✨ Sem pressa. Quando quiser retomar, estaremos por aqui. "
-                f"Acompanhe nossos projetos em @primyn.store ✦"
+                f"Sem problema, {primeiro} 😊 Agradeço pelo seu tempo. "
+                f"Fico à disposição quando quiser retomar!"
+            )
+            dados["status"] = "perdido"
+            sessao["etapa"] = "encerrado"
+        else:
+            resposta = (
+                f"Claro, {primeiro} 😊 Sem pressa. Quando quiser retomar, estaremos por aqui. "
+                f"Acompanhe em @primyn.store 🚀"
             )
             dados["status"] = "aguardando_resposta"
             sessao["etapa"] = "encerrado"
@@ -558,89 +507,54 @@ def processar_mensagem(numero, mensagem):
             except:
                 pass
 
-        elif any(p in msg_lower for p in ["não", "nao", "desisto", "cancelar", "caro"]):
-            resposta = (
-                f"Sem problema, {primeiro_nome} ✨ Agradeço pelo seu tempo e fico à disposição "
-                f"caso queira retomar em outro momento."
-            )
-            dados["status"] = "perdido"
-            sessao["etapa"] = "encerrado"
-
-        else:
-            resposta = (
-                f"{primeiro_nome}, faz sentido prosseguirmos com uma proposta personalizada "
-                f"ou prefere pensar com calma?"
-            )
-
-    # ═══════════════════════════════════════════
-    # URGÊNCIA
-    # ═══════════════════════════════════════════
     elif etapa == "urgencia":
         dados["urgencia"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
-
-        aviso_urgencia = ""
-        if any(p in msg_lower for p in ["urgente", "rápido", "rapido", "pressa", "amanhã", "amanha", "essa semana"]):
-            aviso_urgencia = (
-                "✦ Projetos com criação e produção premium têm prazo médio de "
-                "5 a 8 dias úteis. Vou sinalizar isso no seu encaminhamento.\n\n"
-            )
-
+        primeiro = dados.get("nome", "").split()[0]
+        intencao = interpretar(
+            msg,
+            "O cliente informa se o projeto é urgente ou não.",
+            ["urgente", "sem_pressa"]
+        )
+        aviso = ""
+        if intencao == "urgente":
+            aviso = "Projetos premium têm prazo médio de 5 a 8 dias úteis. Vou sinalizar no encaminhamento. 🚀\n\n"
         resposta = (
-            f"{aviso_urgencia}"
+            f"{aviso}"
             f"{MSG_EDUCATIVA}\n\n"
-            f"😊 Vou encaminhar seu projeto ao nosso sistema para uma proposta personalizada. "
-            f"Em breve, um especialista dará continuidade ao seu atendimento, {primeiro_nome}. ✦"
+            f"😊 Vou encaminhar seu projeto para uma proposta personalizada. "
+            f"Em breve um especialista dará continuidade, {primeiro}. ✨"
         )
         dados["status"] = "handoff"
         sessao["etapa"] = "handoff"
         handoff_data = dados
 
-    # ═══════════════════════════════════════════
-    # HANDOFF (após enviar dados, coleta feedback)
-    # ═══════════════════════════════════════════
     elif etapa == "handoff":
-        primeiro_nome = dados.get("nome", "").split()[0]
+        primeiro = dados.get("nome", "").split()[0]
         resposta = (
-            f"Antes de encerrar, {primeiro_nome} ✨ "
-            f"como foi sua experiência com este atendimento inicial? "
-            f"Sua opinião nos ajuda a melhorar cada vez mais."
+            f"Antes de encerrar, {primeiro} 😊 "
+            f"como foi sua experiência com este atendimento?"
         )
         sessao["etapa"] = "feedback"
 
-    # ═══════════════════════════════════════════
-    # FEEDBACK
-    # ═══════════════════════════════════════════
     elif etapa == "feedback":
         dados["avaliacao"] = msg
-        primeiro_nome = dados.get("nome", "").split()[0]
-        resposta = (
-            f"Muito obrigada pelo feedback, {primeiro_nome}! ✨ "
-            f"Foi um prazer te atender. Até breve! ✦"
-        )
+        primeiro = dados.get("nome", "").split()[0]
+        resposta = f"Muito obrigada, {primeiro}! 🤍 Foi um prazer te atender. Até breve! 😊"
         sessao["etapa"] = "encerrado"
 
-    # ═══════════════════════════════════════════
-    # ENCERRADO (mensagem depois de encerrar)
-    # ═══════════════════════════════════════════
     elif etapa == "encerrado":
-        primeiro_nome = dados.get("nome", "").split()[0] if dados.get("nome") else ""
-        if primeiro_nome:
-            resposta = (
-                f"Olá novamente, {primeiro_nome}! ✨ "
-                f"Quer retomar seu projeto ou precisa de algo mais? Estou por aqui! ✦"
-            )
-        else:
-            resposta = "Olá! ✨ Seja muito bem-vindo(a) de volta à Primyn. Como posso te ajudar?"
+        primeiro = dados.get("nome", "").split()[0] if dados.get("nome") else ""
+        resposta = (
+            f"Olá novamente, {primeiro}! 😊 Quer retomar ou precisa de algo mais? ✨"
+            if primeiro else
+            "Olá! 😊 Seja muito bem-vindo(a) de volta à Primyn. Como posso te ajudar?"
+        )
         sessao["etapa"] = "produto"
 
-    # ═══════════════════════════════════════════
-    # DEFAULT
-    # ═══════════════════════════════════════════
     else:
         resposta = (
             "😊 Olá! Seja muito bem-vindo(a) à Primyn.\n\n"
-            "Sou a Mily, consultora virtual da Primyn. Como posso te ajudar?"
+            "Sou a Mily. Como posso te ajudar?"
         )
         sessao["etapa"] = "triagem_inicial"
 
