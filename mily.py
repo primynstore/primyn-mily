@@ -1,20 +1,9 @@
 # ═══════════════════════════════════════════════
-# PRIMYN STUDIO — AGENTE MILY v4 (Gemini NLU)
-# Compreensão via Google Gemini (gratuito)
-# ═══════════════════════════════════════════════
-
-
-        # ═══════════════════════════════════════════════
-# PRIMYN STUDIO — AGENTE MILY v4 (Claude Haiku)
-# Compreensão via Anthropic Claude Haiku
-# ═══════════════════════════════════════════════
-
-
-# ═══════════════════════════════════════════════
 # PRIMYN STUDIO — AGENTE MILY v5 FINAL
 # Claude Haiku NLU + catálogo completo Primyn
 # Emojis apenas no final das frases
 # ═══════════════════════════════════════════════
+
 
 # ═══════════════════════════════════════════════
 # PRIMYN STUDIO — AGENTE MILY v5 FINAL
