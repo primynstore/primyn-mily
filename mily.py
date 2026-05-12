@@ -16,6 +16,12 @@
 # Emojis apenas no final das frases
 # ═══════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════
+# PRIMYN STUDIO — AGENTE MILY v5 FINAL
+# Claude Haiku NLU + catálogo completo Primyn
+# Emojis apenas no final das frases
+# ═══════════════════════════════════════════════
+
 import json
 import os
 from datetime import datetime
@@ -323,7 +329,7 @@ def processar_mensagem(numero, mensagem):
 
     if etapa == "abertura":
         resposta = (
-            "Olá! Seja muito bem-vindo(a) à Primyn. 🤩\n\n"
+            "Olá! Seja muito bem-vindo(a) à Primyn. 😊\n\n"
             "Sou a Mily, consultora virtual da Primyn. Vou entender o que você procura "
             "e direcionar seu atendimento da forma mais estratégica possível. "
             "Ao final, um especialista dará continuidade para garantir que cada detalhe "
@@ -343,7 +349,7 @@ def processar_mensagem(numero, mensagem):
             dados["origem_relacional"] = "recompra"
             sessao["fluxo"] = "cliente_recorrente"
             resposta = (
-                "Que bom te ver de volta! ✨\n\n"
+                "Que bom te ver de volta! 😊\n\n"
                 "Para localizar seu cadastro e agilizar seu novo pedido, "
                 "pode me informar seu nome e sobrenome completo?"
             )
@@ -370,7 +376,7 @@ def processar_mensagem(numero, mensagem):
         if not valido:
             resposta = (
                 "Para encontrar seu cadastro com precisão, preciso do seu nome "
-                "e sobrenome. Como posso te chamar?"
+                "e sobrenome completo. Como posso te chamar? 😊"
             )
         else:
             dados["nome"] = nome_extraido
@@ -378,13 +384,13 @@ def processar_mensagem(numero, mensagem):
             fluxo = sessao.get("fluxo")
             if fluxo == "cliente_recorrente":
                 resposta = (
-                    f"Que prazer, {primeiro}! Já te localizo aqui no sistema.\n\n"
+                    f"Que prazer, {primeiro}! Já te localizo aqui no sistema. 😊\n\n"
                     f"Me conta: qual material você gostaria de produzir desta vez?"
                 )
                 sessao["etapa"] = "produto"
             elif fluxo == "lead_antigo":
                 resposta = (
-                    f"Encontrei seu histórico, {primeiro}!\n\n"
+                    f"Encontrei seu histórico, {primeiro}! 😊\n\n"
                     f"Você prefere retomar o projeto anterior ou começar algo novo?"
                 )
                 sessao["etapa"] = "retomar_ou_novo"
@@ -410,7 +416,7 @@ def processar_mensagem(numero, mensagem):
         if not valido:
             resposta = (
                 "Esse e-mail não parece válido. "
-                "Pode me passar seu email corretamente? Ex: seunome@gmail.com"
+                "Pode me passar seu endereço completo? Ex: seunome@gmail.com 😊"
             )
         else:
             dados["email"] = email_extraido
@@ -588,7 +594,7 @@ def processar_mensagem(numero, mensagem):
             dados["arte"] = "precisa_criacao"
             if aceita_3d:
                 resposta = (
-                    f"Sem problema, podemos desenvolver para você. 😃\n\n"
+                    f"Sem problema, podemos desenvolver para você. 🚀\n\n"
                     f"Opções de criação:\n\n"
                     f"• Criação de arte — R$ 74,90\n"
                     f"• Criação de arte + amostra 3D — R$ 220,00\n"
@@ -608,7 +614,7 @@ def processar_mensagem(numero, mensagem):
     elif etapa == "email_design":
         valido, email_extraido = extrair_e_validar(msg, "email")
         if not valido:
-            resposta = "Pode me passar seu e-mail completo? Ex: seunome@gmail.com"
+            resposta = "Pode me passar seu e-mail completo? Ex: seunome@gmail.com 😊"
         else:
             dados["email"] = email_extraido
             primeiro = dados.get("nome", "").split()[0]
@@ -659,7 +665,7 @@ def processar_mensagem(numero, mensagem):
             dados["criacao"] = "criacao_simples"
             dados["valor_criacao"] = 74.90
             resposta = (
-                f"Nossa equipe vai criar algo incrível para você. 👑\n\n"
+                f"Nossa equipe vai criar algo incrível para você. 😊\n\n"
                 f"Qual tipo de papel faz mais sentido para o seu projeto?\n\n"
                 f"Couchê 300g, texturado até 400g ou texturado acima de 400g?"
             )
@@ -673,20 +679,37 @@ def processar_mensagem(numero, mensagem):
                 f"O Couchê 300g é nossa opção de entrada. Para refletir o padrão Primyn, "
                 f"trabalhamos obrigatoriamente com hot stamping ou baixo relevo — "
                 f"sem acabamento premium, ele se torna um cartão comum. 👑\n\n"
-                f"Qual acabamento prefere, ou quer explorar nossos papéis texturados?"
+                f"Qual acabamento prefere, ou quer explorar nossos papéis texturados?\n\n"
+                f"Veja nossos tipos de papel e texturas: https://www.primyn.com/pagina/tipos-de-papeis-e-texturas"
             )
             sessao["etapa"] = "papel_couche_validar"
         else:
             resposta = (
-                f"Em relação ao acabamento, o que faz mais sentido para a sua marca?\n\n"
-                f"• Hot stamping\n"
-                f"• Alto relevo seco\n"
-                f"• Baixo relevo\n"
-                f"• Empastamento / borda sanduíche\n"
-                f"• Impressão colorida no papel especial\n"
-                f"• Combinação de acabamentos"
+                f"Para te ajudar a escolher o papel ideal, veja nosso catálogo completo de texturas: "
+                f"https://www.primyn.com/pagina/tipos-de-papeis-e-texturas ✨\n\n"
+                f"Os mais vendidos são o Conqueror Bamboo 400g e o Papel Notturno Black 450g — "
+                f"ambos transmitem sofisticação desde o primeiro toque.\n\n"
+                f"Qualquer papel do catálogo que você escolher será considerado texturado premium. "
+                f"Qual você prefere ou qual se aproxima mais da sua visão de marca?\n\n"
+                f"E para se inspirar nos nossos projetos: https://www.instagram.com/primyn.store/"
             )
-            sessao["etapa"] = "acabamento"
+            sessao["etapa"] = "papel_escolhido"
+
+    elif etapa == "papel_escolhido":
+        dados["material"] = msg
+        resposta = (
+            f"Ótima escolha! Agora, em relação ao acabamento — cada um transforma "
+            f"completamente a percepção do material. 👑\n\n"
+            f"Veja os detalhes de cada opção:\n\n"
+            f"• Hot stamping — https://www.primyn.com/pagina/o-que-e-hot-stamping-foil\n"
+            f"• Alto relevo seco — https://www.primyn.com/pagina/o-que-e-alto-relevo-seco\n"
+            f"• Baixo relevo — https://www.primyn.com/pagina/o-que-e-letterpress\n"
+            f"• Empastamento de papéis\n"
+            f"• Impressão colorida no papel especial\n"
+            f"• Combinação de acabamentos\n\n"
+            f"Qual faz mais sentido para a sua marca?"
+        )
+        sessao["etapa"] = "acabamento"
 
     elif etapa == "papel_couche_validar":
         primeiro = dados.get("nome", "").split()[0]
@@ -697,12 +720,20 @@ def processar_mensagem(numero, mensagem):
         )
         if intencao == "quer_texturado":
             dados["material"] = "texturado"
-            resposta = "Texturado até 400g ou acima de 400g? ✨"
-            sessao["etapa"] = "papel"
+            resposta = (
+                f"Ótima escolha explorar os texturados! ✨\n\n"
+                f"Veja nosso catálogo completo: "
+                f"https://www.primyn.com/pagina/tipos-de-papeis-e-texturas\n\n"
+                f"Os mais vendidos são o Conqueror Bamboo 400g e o Papel Notturno Black 450g. "
+                f"Qualquer papel do catálogo será considerado texturado premium.\n\n"
+                f"Qual você prefere ou qual se aproxima mais da sua visão de marca?\n\n"
+                f"Inspire-se nos nossos projetos: https://www.instagram.com/primyn.store/"
+            )
+            sessao["etapa"] = "papel_escolhido"
         elif intencao == "recusa_acabamento":
             resposta = (
                 f"Entendemos, {primeiro}. "
-                f"Quando quiser explorar uma proposta premium, estaremos por aqui. ✨"
+                f"Quando quiser explorar uma proposta premium, estaremos por aqui. 😊"
             )
             dados["status"] = "fora_escopo"
             sessao["etapa"] = "encerrado"
@@ -712,7 +743,28 @@ def processar_mensagem(numero, mensagem):
             sessao["etapa"] = "quantidade"
 
     elif etapa == "acabamento":
-        dados["acabamento"] = msg
+        primeiro = dados.get("nome", "").split()[0]
+        msg_lower = msg.lower()
+        if any(p in msg_lower for p in ["empastamento", "borda", "sanduiche", "sanduíche"]):
+            dados["acabamento"] = msg
+            resposta = (
+                f"Ótima escolha! O empastamento tem três finalidades: 👑\n\n"
+                f"• Papel mais grosso — colar dois papéis para dar mais espessura e rigidez\n"
+                f"• Evitar marcação do relevo — impede que o baixo relevo ou hot stamping "
+                f"apareça no lado oposto do papel\n"
+                f"• Borda sanduíche (borda colorida) — o interior fica colorido, "
+                f"revelando uma cor especial ao olhar a borda do cartão\n\n"
+                f"Qual dessas finalidades faz mais sentido para o seu projeto?\n\n"
+                f"Veja nossos projetos para se inspirar: https://www.instagram.com/primyn.store/"
+            )
+            sessao["etapa"] = "empastamento_detalhe"
+        else:
+            dados["acabamento"] = msg
+            resposta = "Qual quantidade você está considerando para esse projeto? ✨"
+            sessao["etapa"] = "quantidade"
+
+    elif etapa == "empastamento_detalhe":
+        dados["empastamento_tipo"] = msg
         resposta = "Qual quantidade você está considerando para esse projeto? ✨"
         sessao["etapa"] = "quantidade"
 
@@ -745,7 +797,7 @@ def processar_mensagem(numero, mensagem):
         media_fmt = fmt_brl(media)
         resposta = (
             f"{aviso_minimo}"
-            f"Para a configuração que você me passou, o investimento médio fica em torno de {media_fmt}.\n\n"
+            f"Para a configuração que você me passou, o investimento médio fica em torno de {media_fmt}. 🚀\n\n"
             f"Esse valor é uma referência — o orçamento final é personalizado conforme "
             f"material, acabamento e complexidade. 👑\n\n"
             f"Faz sentido prosseguirmos com uma proposta personalizada?"
@@ -835,7 +887,7 @@ def processar_mensagem(numero, mensagem):
             f"{aviso}"
             f"{MSG_EDUCATIVA}\n\n"
             f"Vou encaminhar seu projeto para uma proposta personalizada. "
-            f"Em breve um especialista dará continuidade ao seu atendimento, {primeiro}."
+            f"Em breve um especialista dará continuidade ao seu atendimento, {primeiro}. 😊"
         )
         dados["status"] = "handoff"
         sessao["etapa"] = "handoff"
@@ -855,14 +907,14 @@ def processar_mensagem(numero, mensagem):
         primeiro = dados.get("nome", "").split()[0]
         resposta = (
             f"Muito obrigada pelo feedback, {primeiro}! "
-            f"Foi um prazer te atender. Até breve!"
+            f"Foi um prazer te atender. Até breve! 🤍"
         )
         sessao["etapa"] = "encerrado"
 
     elif etapa == "encerrado":
         primeiro = dados.get("nome", "").split()[0] if dados.get("nome") else ""
         resposta = (
-            f"Olá novamente, {primeiro}! Quer retomar seu projeto ou precisa de algo mais?"
+            f"Olá novamente, {primeiro}! Quer retomar seu projeto ou precisa de algo mais? 😊"
             if primeiro else
             "Olá! Seja muito bem-vindo(a) de volta à Primyn. Como posso te ajudar? 😊"
         )
