@@ -695,3 +695,5 @@ def processar_mensagem(numero, mensagem):
     sessao["dados"]=dados
     upd_sessao(numero,sessao)
     return resposta,handoff_data
+# Alias para compatibilidade com app.py
+carregar_sessoes = load
