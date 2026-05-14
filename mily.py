@@ -1,3 +1,4 @@
+
 import json, os, random
 from datetime import datetime
 
@@ -18,27 +19,25 @@ PRODUTOS = {
                     "Conqueror Bamboo 400g","Rives Tradition White 400g","Rives Tradition Natural 400g"],
           "medias":{"100":{"essencial":1250,"luxo_black":1250,"luxo_white":1250,"prestigio":1250},
                     "250":{"essencial":2200,"luxo_black":2200,"luxo_white":2200,"prestigio":2200},
-                    "500":{"essencial":3500,"luxo_black":3500,"luxo_white":3500,"prestigio":3500},
-                    "2000":None}},
+                    "500":{"essencial":3500,"luxo_black":3500,"luxo_white":3500,"prestigio":3500}}},
     "3": {"nome":"Envelope Ofício / Saco","minimo":100,"aceita_3d":False,
-          "papeis":["Offset 180g","Conqueror Bamboo 120g","Rives Tradition White 120g",
-                    "Rives Tradition Natural 120g","Color Plus 180g (diversas cores)"],
+          "papeis":["Offset 180g","Conqueror Bamboo 120g",
+                    "Rives Tradition White 120g","Rives Tradition Natural 120g",
+                    "Color Plus 180g (diversas cores)"],
           "medias":{"100":{"essencial":620,"luxo_black":620,"luxo_white":620,"prestigio":620},
                     "250":{"essencial":890,"luxo_black":890,"luxo_white":890,"prestigio":890},
-                    "500":{"essencial":1290,"luxo_black":1290,"luxo_white":1290,"prestigio":1290},
-                    "2000":None}},
-    "4": {"nome":"Papel Timbrado / Receituário","minimo":250,"aceita_3d":False,
+                    "500":{"essencial":1290,"luxo_black":1290,"luxo_white":1290,"prestigio":1290}}},
+    "4": {"nome":"Papel Timbrado / Receituário","minimo":100,"aceita_3d":False,
           "papeis":["Offset 120g","Offset 180g","Conqueror Bamboo 120g",
                     "Rives Tradition White 120g","Rives Tradition Natural 120g","Color Plus 120g"],
-          "medias":{"250":{"essencial":290,"luxo_black":290,"luxo_white":290,"prestigio":290},
-                    "500":{"essencial":490,"luxo_black":490,"luxo_white":490,"prestigio":490},
-                    "1000":{"essencial":790,"luxo_black":790,"luxo_white":790,"prestigio":790},
-                    "2000":None}},
+          "medias":{"100":{"essencial":290,"luxo_black":290,"luxo_white":290,"prestigio":290},
+                    "250":{"essencial":490,"luxo_black":490,"luxo_white":490,"prestigio":490},
+                    "500":{"essencial":790,"luxo_black":790,"luxo_white":790,"prestigio":790},
+                    "1000":{"essencial":1190,"luxo_black":1190,"luxo_white":1190,"prestigio":1190}}},
     "5": {"nome":"Papelaria Completa","minimo":250,"aceita_3d":False,
           "papeis":[],
           "medias":{"250":{"essencial":4200,"luxo_black":4200,"luxo_white":5800,"prestigio":5800},
-                    "500":{"essencial":5800,"luxo_black":5800,"luxo_white":7500,"prestigio":7500},
-                    "2000":None}}
+                    "500":{"essencial":5800,"luxo_black":5800,"luxo_white":7500,"prestigio":7500}}}
 }
 
 ITENS_KIT = {"1","2","3","4"}
@@ -51,7 +50,7 @@ PAPEIS_AREA = {
     "2":"Rives Tradition Natural 400g ou Conqueror Bamboo 400g",
     "3":"Rives Tradition White 400g ou Conqueror Bamboo 400g",
     "4":"Color Plus ou Rives Tradition White 400g",
-    "5":"Notturno Black 450g, Dark Blue 450g ou Rives Tradition White 400g",
+    "5":"Notturno Black 450g ou Rives Tradition White 400g",
     "6":"Conqueror Bamboo 400g ou Notturno Black 450g"
 }
 
@@ -63,16 +62,6 @@ TRANS_AREA = {
     "5":"Finanças — onde a percepção de solidez faz toda a diferença.",
     "6":"Cada área tem sua identidade. Vamos encontrar o material que melhor representa a sua."
 }
-
-MSG_EDUCATIVA = (
-    "Antes de encaminhar, quero compartilhar um pensamento:\n\n"
-    "Materiais de papelaria premium não são apenas papel — são o primeiro toque físico "
-    "que o seu cliente tem com a sua marca. Um cartão com textura e acabamento em "
-    "hot stamping ou baixo relevo transmite sofisticação antes mesmo de qualquer palavra. "
-    "Estudos mostram que materiais de alta qualidade aumentam em até 3x a percepção de valor. "
-    "Você não entrega um cartão — você entrega uma experiência. 👑\n\n"
-    "Sua marca merece deixar essa impressão. 🤍"
-)
 
 ACOLH = ["Com certeza,","Entendido,","Anotado,","Perfeito,","Ótimo,","Que bom,"]
 def ac(): return random.choice(ACOLH)
@@ -118,29 +107,28 @@ def media_produto(num, material, qtd):
     for f in faixas:
         if qtd>=f: qs=str(f)
     val=med.get(qs)
-    if val is None: return -1  # acima do limite
+    if val is None: return -1
     m=(material or "").lower()
     if "couche" in m or "couchê" in m or "offset" in m or "color plus" in m: t="essencial"
     elif "black" in m or "notturno" in m or "dark blue" in m: t="luxo_black"
     elif "rives" in m or "conqueror" in m: t="luxo_white"
     else: t="luxo_white"
-    return val.get(t,list(val.values())[0]) if val else 0
+    return val.get(t, list(val.values())[0]) if val else 0
 
 def calcular_total(produtos_lista, material, qtd, valor_criacao=0):
-    linhas=[]; total=0; acima_limite=False
+    linhas=[]; total=0; acima_lim=False
     for p in produtos_lista:
         if p in PRODUTOS:
             qtd_p=max(qtd, PRODUTOS[p]["minimo"])
             v=media_produto(p, material, qtd_p)
-            if v==-1:
-                acima_limite=True
+            if v==-1: acima_lim=True
             elif v>0:
                 linhas.append(f"• {PRODUTOS[p]['nome']}: {fmt(v)}")
                 total+=v
     if valor_criacao>0:
         linhas.append(f"• Criação de arte: {fmt(valor_criacao)}")
         total+=valor_criacao
-    return linhas, total, acima_limite
+    return linhas, total, acima_lim
 
 def interp_qtd(msg):
     msg=msg.strip()
@@ -153,23 +141,18 @@ def interp_qtd(msg):
         n=int("".join(filter(str.isdigit,msg)))
         if n>0:
             if n>2000: return "acima",None
-            if n<100: return "menos",None
             return True,n
     except: pass
     return False,None
 
 def menu_qtd(minimo=100):
-    opcoes=[]
-    if minimo<=250: opcoes.append("1. Menos de 250")
-    opcoes.append("2. 250 unidades")
-    opcoes.append("3. 500 unidades")
-    opcoes.append("4. 1.000 unidades")
-    opcoes.append("5. 2.000 unidades")
-    opcoes.append("6. Acima de 2.000")
-    return "\n".join(opcoes)
+    linhas=[]
+    if minimo<=250: linhas.append("1. Menos de 250")
+    linhas += ["2. 250 unidades","3. 500 unidades","4. 1.000 unidades","5. 2.000 unidades","6. Acima de 2.000"]
+    return "\n".join(linhas)
 
 def menu_produtos():
-    return ("Pode digitar o número da opção ou o nome do material:\n\n"
+    return ("Pode escolher mais de uma opção — e se quiser praticidade, basta digitar o número:\n\n"
             "1. Cartão de Visita / TAG\n"
             "2. Pasta com bolsa ou orelha\n"
             "3. Envelope Ofício / Saco\n"
@@ -180,7 +163,7 @@ def papeis_do_produto(produto_num):
     p=PRODUTOS.get(produto_num,{})
     papeis=p.get("papeis",[])
     if not papeis: return ""
-    return "Os papéis disponíveis para esse material são:\n" + "\n".join(f"• {pp}" for pp in papeis)
+    return "Papéis disponíveis para esse material:\n" + "\n".join(f"• {pp}" for pp in papeis)
 
 def load():
     if os.path.exists(DB_FILE):
@@ -215,11 +198,10 @@ def processar_mensagem(numero, mensagem):
     AREAS_MENU = ("1. Advocacia / Direito\n2. Arquitetura / Engenharia\n3. Medicina / Saúde\n"
                   "4. Moda / Beleza / Lifestyle\n5. Finanças / Executivo\n6. Outro")
 
-    def handoff_msg():
+    def hdoff():
         return ("Vou te encaminhar agora para um especialista que dará continuidade ao seu atendimento, "
                 "com opção de reunião estratégica, se preferir. 🚀")
 
-    # ABERTURA
     if etapa=="abertura":
         resposta=var(
             "Olá! É um prazer enorme ter você aqui. 😊\n\n"
@@ -231,14 +213,13 @@ def processar_mensagem(numero, mensagem):
             "1. Primeira vez\n2. Já sou cliente\n3. Já conversei com vocês antes",
 
             "Olá! Que bom receber você por aqui. 😊\n\n"
-            "Sou a Mily, da Primyn, e estou aqui para te orientar com cuidado e precisão. "
-            "Ao final do atendimento, um especialista assume para que tudo saia perfeito.\n\n"
+            "Sou a Mily, da Primyn, e estou aqui para te orientar com cuidado e atenção. "
+            "Ao final, um especialista assume para que tudo saia exatamente como você deseja.\n\n"
             "Para começarmos:\n\n"
             "1. Primeira vez\n2. Já sou cliente\n3. Já conversei com vocês antes"
         )
         sessao["etapa"]="triagem_inicial"; sessao["tentativas"]=0
 
-    # TRIAGEM
     elif etapa=="triagem_inicial":
         if any(p in ml for p in ["2","já sou","ja sou","cliente","já comprei","ja comprei","sou cliente","já conheço","ja conheco"]):
             dados["tipo_contato"]="cliente_recorrente"; sessao["fluxo"]="cliente_recorrente"
@@ -258,7 +239,6 @@ def processar_mensagem(numero, mensagem):
             )
             sessao["etapa"]="origem"
 
-    # ORIGEM
     elif etapa=="origem":
         if any(p in ml for p in ["1","google"]):
             dados["origem"]="Google"
@@ -276,13 +256,11 @@ def processar_mensagem(numero, mensagem):
             tent+=1; sessao["tentativas"]=tent
             resposta="Por favor, escolha uma das opções:\n\n1. Google\n2. Instagram\n3. Indicação"
 
-    # ORIGEM INDICAÇÃO
     elif etapa=="origem_indicacao":
         dados["indicado_por"]=msg
         resposta="Obrigada! Vamos agradecer com carinho por você. 🤍\n\nPode me dizer seu nome e sobrenome?"
         sessao["etapa"]="nome"; sessao["tentativas"]=0
 
-    # NOME
     elif etapa=="nome":
         valido,nome_fmt=val_nome(msg)
         if not valido:
@@ -290,8 +268,7 @@ def processar_mensagem(numero, mensagem):
             if tent>=3:
                 nome_fmt=msg.strip().title(); dados["nome"]=nome_fmt
                 primeiro=nome_fmt.split()[0]; sessao["tentativas"]=0
-                fluxo=sessao.get("fluxo")
-                if fluxo=="cliente_recorrente":
+                if sessao.get("fluxo")=="cliente_recorrente":
                     sessao["etapa"]="produto"
                     resposta=f"Olá, {primeiro}! O que posso fazer por você hoje?\n\n"+menu_produtos()
                 else:
@@ -299,7 +276,7 @@ def processar_mensagem(numero, mensagem):
                     resposta=f"Prazer, {primeiro}! Qual é o seu melhor e-mail para envio da proposta?"
             else:
                 sessao["tentativas"]=tent
-                resposta="Para personalizar seu atendimento, precisaria do seu nome e sobrenome completos. Como posso te chamar?"
+                resposta="Para personalizar seu atendimento, precisaria do seu nome e sobrenome. Como posso te chamar?"
         else:
             dados["nome"]=nome_fmt; primeiro=nome_fmt.split()[0]; sessao["tentativas"]=0
             fluxo=sessao.get("fluxo")
@@ -322,7 +299,6 @@ def processar_mensagem(numero, mensagem):
                 )
                 sessao["etapa"]="email"
 
-    # EMAIL
     elif etapa=="email":
         valido,email_fmt=val_email(msg)
         primeiro=dados.get("nome","").split()[0]
@@ -334,7 +310,7 @@ def processar_mensagem(numero, mensagem):
                           f"Qual projeto você gostaria de produzir?\n\n"+menu_produtos())
             else:
                 sessao["tentativas"]=tent
-                resposta="Esse endereço não parece estar completo. Pode conferir e me enviar novamente? Ex: seunome@gmail.com"
+                resposta="Esse endereço não parece estar completo. Pode conferir e enviar novamente? Ex: seunome@gmail.com"
         else:
             dados["email"]=email_fmt; sessao["tentativas"]=0
             resposta=var(
@@ -343,18 +319,16 @@ def processar_mensagem(numero, mensagem):
             )
             sessao["etapa"]="produto"
 
-    # RETOMAR OU NOVO
     elif etapa=="retomar_ou_novo":
         primeiro=dados.get("nome","").split()[0]
         if any(p in ml for p in ["1","retomar","anterior","mesmo","continuar"]):
-            resposta=handoff_msg()
+            resposta=hdoff()
             dados["status"]="handoff"; sessao["etapa"]="handoff"; handoff_data=dados
         else:
             sessao["fluxo"]="novo_lead"
             resposta=f"Ótimo! O que você gostaria de produzir, {primeiro}?\n\n"+menu_produtos()
             sessao["etapa"]="produto"
 
-    # PRODUTO
     elif etapa=="produto":
         primeiro=dados.get("nome","").split()[0]
         prods=detectar_produtos(msg)
@@ -366,7 +340,7 @@ def processar_mensagem(numero, mensagem):
             outros=[p for p in prods if p!="5"]
             if not outros and "5" in prods:
                 dados["produto_num"]="5"; dados["produto"]=PRODUTOS["5"]["nome"]
-                dados["produtos_lista"]=["5"]; dados["upsell_feito"]=True
+                dados["produtos_lista"]=["5"]
                 resposta=(f"A papelaria completa é um projeto muito especial, {primeiro}. 👑\n\n"
                           "O kit reúne cartão de visita, papel timbrado, pasta e envelope "
                           "com a mesma identidade visual — coerência e sofisticação "
@@ -376,56 +350,26 @@ def processar_mensagem(numero, mensagem):
                 sessao["etapa"]="papelaria_completa_confirma"
             else:
                 if not outros: outros=prods
-                dados["produtos_lista"]=outros; dados["produto_atual_idx"]=0
+                dados["produtos_lista"]=outros
                 dados["produto_num"]=outros[0]; dados["produto"]=PRODUTOS[outros[0]]["nome"]
-                dados["upsell_feito"]=False
-                if outros[0]=="1" and len(outros)==1 and not dados.get("upsell_feito"):
-                    dados["upsell_feito"]=True
-                    resposta=("Ótima escolha! ✨\n\n"
-                              "Antes de seguirmos — sabia que clientes que investem em papelaria completa "
-                              "(cartão, timbrado, pasta e envelope com a mesma identidade) transmitem uma "
-                              "coerência visual que eleva a percepção da marca de forma marcante?\n\n"
-                              "Gostaria de conhecer essa opção ou prefere seguir só com o cartão?\n\n"
-                              "1. Quero conhecer a papelaria completa\n2. Seguir com o cartão de visita")
-                    sessao["etapa"]="upsell_resposta"
+                if len(outros)>1:
+                    nomes=[PRODUTOS[p]["nome"] for p in outros]
+                    lista="\n".join([f"• {n}" for n in nomes])
+                    intro=f"Ótima escolha! Vamos trabalhar nesses projetos:\n\n{lista}\n\n"
                 else:
-                    if len(outros)>1:
-                        nomes=[PRODUTOS[p]["nome"] for p in outros]
-                        lista="\n".join([f"• {n}" for n in nomes])
-                        intro=f"Ótima escolha! Vamos trabalhar nesses projetos:\n\n{lista}\n\n"
-                    else:
-                        intro="Ótima escolha! ✨\n\n"
-                    resposta=(f"{intro}Em qual área você atua?\n\n{AREAS_MENU}")
-                    sessao["etapa"]="area"
+                    intro="Ótima escolha! ✨\n\n"
+                resposta=(f"{intro}Em qual área você atua?\n\n{AREAS_MENU}")
+                sessao["etapa"]="area"
 
-    # UPSELL
-    elif etapa=="upsell_resposta":
-        primeiro=dados.get("nome","").split()[0]
-        if any(p in ml for p in ["1","quero","sim","papelaria","completa","kit","conhecer"]):
-            dados["produto_num"]="5"; dados["produto"]=PRODUTOS["5"]["nome"]
-            dados["produtos_lista"]=["5"]
-            resposta=(f"Que escolha incrível, {primeiro}! 👑\n\n"
-                      "O kit reúne cartão de visita, papel timbrado, pasta e envelope — "
-                      "todos com a mesma identidade visual.\n\n"
-                      "Gostaria de prosseguir com uma proposta personalizada?\n\n"
-                      "1. Sim, quero a proposta\n2. Prefiro pensar um pouco mais")
-            sessao["etapa"]="papelaria_completa_confirma"
-        else:
-            dados["produtos_lista"]=["1"]; dados["produto_num"]="1"
-            resposta=f"Perfeito! Vamos seguir com o cartão. ✨\n\nEm qual área você atua?\n\n{AREAS_MENU}"
-            sessao["etapa"]="area"
-
-    # PAPELARIA COMPLETA CONFIRMA
     elif etapa=="papelaria_completa_confirma":
         primeiro=dados.get("nome","").split()[0]
         if any(p in ml for p in ["1","sim","quero","pode","vamos"]):
-            resposta=handoff_msg()
+            resposta=hdoff()
             dados["status"]="handoff"; sessao["etapa"]="handoff"; handoff_data=dados
         else:
             resposta=f"Sem pressa, {primeiro}. Quando quiser retomar, estamos aqui. 😊"
             dados["status"]="aguardando_resposta"; sessao["etapa"]="encerrado"
 
-    # ÁREA
     elif etapa=="area":
         opcao=None
         for k,v in AREAS.items():
@@ -439,68 +383,51 @@ def processar_mensagem(numero, mensagem):
             dados["papel_recomendado"]=PAPEIS_AREA.get(opcao,"")
             sessao["tentativas"]=0
             resposta=(f"{TRANS_AREA.get(opcao,'')} ✨\n\n"
-                      "Os papéis mais escolhidos pelos nossos clientes para essa área são "
-                      "o Conqueror Bamboo 400g e o Notturno Black 450g — "
-                      "sofisticação transmitida desde o primeiro toque.\n\n"
                       "Você já tem a arte finalizada ou possui alguma referência visual?\n\n"
                       "1. Sim, já tenho arte pronta\n"
                       "2. Sim, tenho referência")
             sessao["etapa"]="arte"
 
-    # ARTE
     elif etapa=="arte":
-        primeiro=dados.get("nome","").split()[0]
         produto_num=dados.get("produto_num","1")
         papeis=papeis_do_produto(produto_num)
+        cats=("\n\nCatálogo de papéis: https://www.primyn.com/pagina/tipos-de-papeis-e-texturas\n"
+              "Nossos projetos: https://www.instagram.com/primyn.store/")
 
         if any(p in ml for p in ["1","já tenho","ja tenho","tenho arte","pronta","finalizada"]):
             dados["arte"]="pronta"
             resposta=var(
-                f"Perfeito! Qual papel você está considerando para esse projeto?\n\n{papeis}\n\n"
-                "Se quiser explorar as opções, veja nosso catálogo:\n"
-                "https://www.primyn.com/pagina/tipos-de-papeis-e-texturas\n\n"
-                "E para se inspirar nos nossos projetos:\nhttps://www.instagram.com/primyn.store/",
-
-                f"Ótimo! Vamos ao material.\n\n{papeis}\n\n"
-                "Catálogo completo: https://www.primyn.com/pagina/tipos-de-papeis-e-texturas\n"
-                "Nossos projetos: https://www.instagram.com/primyn.store/"
+                f"Perfeito! Qual papel você está considerando para esse projeto?\n\n{papeis}{cats}",
+                f"Ótimo! Vamos ao material.\n\n{papeis}{cats}"
             )
             sessao["etapa"]="papel_escolha"
-
-        elif any(p in ml for p in ["2","sim","referência","referencia","tenho ref","ref"]):
+        elif any(p in ml for p in ["2","sim","referência","referencia","ref"]):
             dados["arte"]="referencia"
             resposta=var(
-                "Que bom! Pode nos enviar quando quiser — sem pressa. 😊\n\n"
-                "Se precisar de inspiração, temos projetos lindos no Instagram:\n"
-                "https://www.instagram.com/primyn.store/\n\n"
-                "Enquanto isso, qual papel você imagina para esse projeto?\n\n{papeis}\n\n"
-                "Catálogo: https://www.primyn.com/pagina/tipos-de-papeis-e-texturas",
-
-                "Com certeza! A referência nos ajuda muito a afinar a proposta. 😊\n\n"
-                "Qual papel você imagina para esse projeto?\n\n{papeis}\n\n"
-                "Inspire-se nos nossos projetos: https://www.instagram.com/primyn.store/"
-            ).replace("{papeis}", papeis)
+                f"Que bom! Pode nos enviar quando quiser — sem pressa. 😊\n\n"
+                f"Se quiser inspiração antes, temos projetos lindos no Instagram:\nhttps://www.instagram.com/primyn.store/\n\n"
+                f"Enquanto isso, qual papel você imagina para esse projeto?\n\n{papeis}{cats}",
+                f"Com certeza! A referência nos ajuda muito a afinar a proposta. 😊\n\n"
+                f"Qual papel você imagina para esse projeto?\n\n{papeis}{cats}"
+            )
             sessao["etapa"]="papel_escolha"
         else:
             tent+=1; sessao["tentativas"]=tent
             resposta=("Por favor, escolha uma das opções:\n\n"
-                      "1. Sim, já tenho arte pronta\n"
-                      "2. Sim, tenho referência")
+                      "1. Sim, já tenho arte pronta\n2. Sim, tenho referência")
 
-    # PAPEL ESCOLHA
     elif etapa=="papel_escolha":
         produto_num=dados.get("produto_num","1")
         if any(p in ml for p in ["não sei","nao sei","ajuda","sugestão","sugestao","indica","qual"]):
             papel_rec=dados.get("papel_recomendado","Conqueror Bamboo 400g")
             resposta=(f"Para a sua área, costumamos recomendar {papel_rec}. ✨\n\n"
-                      "Veja o catálogo completo para se inspirar:\n"
+                      "Veja o catálogo para se inspirar:\n"
                       "https://www.primyn.com/pagina/tipos-de-papeis-e-texturas\n\n"
                       "Quando decidir, me conta qual papel você escolheu.")
         elif len(msg.strip())<2:
             resposta="Pode me dizer qual papel você escolheu?"
         else:
-            dados["material"]=msg
-            sessao["tentativas"]=0
+            dados["material"]=msg; sessao["tentativas"]=0
             if ("couche" in ml or "couchê" in ml) and produto_num in ["1","2"]:
                 resposta=("O Couchê 300g é nossa opção de entrada — e, para manter o padrão Primyn, "
                           "trabalhamos obrigatoriamente com hot stamping ou relevo. "
@@ -514,20 +441,17 @@ def processar_mensagem(numero, mensagem):
                           "1. Sim, já conheço\n2. Não, gostaria de conhecer")
                 sessao["etapa"]="acab_conhece"
 
-    # PAPEL COUCHÊ ACABAMENTO
     elif etapa=="papel_couche_acab":
         if any(p in ml for p in ["4","catálogo","catalogo","texturado","textura","explorar","especial"]):
-            resposta=("Com prazer! Veja nosso catálogo completo de papéis:\n"
+            resposta=("Com prazer! Veja nosso catálogo completo:\n"
                       "https://www.primyn.com/pagina/tipos-de-papeis-e-texturas\n\n"
-                      "Os mais escolhidos são o Conqueror Bamboo 400g e o Notturno Black 450g — "
-                      "sofisticação desde o primeiro toque. ✨\n\n"
                       "Para se inspirar nos nossos projetos:\nhttps://www.instagram.com/primyn.store/\n\n"
                       "Quando decidir, me conta qual papel você escolheu.")
             sessao["etapa"]="papel_escolha"
         elif any(p in ml for p in ["sem","não quero","nao quero","nenhum"]):
             primeiro=dados.get("nome","").split()[0]
             resposta=(f"Entendemos, {primeiro}. Quando quiser explorar uma proposta "
-                      "alinhada ao padrão Primyn, estaremos aqui com prazer. 😊")
+                      "alinhada ao padrão Primyn, estaremos aqui. 😊")
             dados["status"]="fora_escopo"; sessao["etapa"]="encerrado"
         else:
             am={"1":"Hot stamping","2":"Alto relevo seco","3":"Baixo relevo"}
@@ -543,14 +467,13 @@ def processar_mensagem(numero, mensagem):
             else:
                 resposta="Por favor, escolha:\n\n1. Hot stamping\n2. Alto relevo seco\n3. Baixo relevo\n4. Ver catálogo de texturas"
 
-    # ACABAMENTO CONHECE
     elif etapa=="acab_conhece":
         if any(p in ml for p in ["1","sim","já conheço","ja conheco","conheço","conheco"]):
             resposta=("Qual acabamento conversa melhor com a identidade da sua marca?\n\n"
                       "1. Hot stamping\n2. Alto relevo seco\n3. Baixo relevo\n"
                       "4. Empastamento / borda sanduíche\n5. Impressão colorida no papel especial\n"
                       "6. Combinação de acabamentos\n\n"
-                      "Veja nossos projetos para se inspirar: https://www.instagram.com/primyn.store/")
+                      "Veja nossos projetos: https://www.instagram.com/primyn.store/")
         else:
             resposta=("Conheça cada acabamento nos links abaixo — e, se quiser ver projetos reais, "
                       "dê uma olhada no nosso Instagram. 😊\n\n"
@@ -564,7 +487,6 @@ def processar_mensagem(numero, mensagem):
                       "Qual deles faz mais sentido para o projeto da sua marca?")
         sessao["etapa"]="acabamento"
 
-    # ACABAMENTO
     elif etapa=="acabamento":
         am={"1":"Hot stamping","2":"Alto relevo seco","3":"Baixo relevo",
             "4":"Empastamento / borda sanduíche","5":"Impressão colorida","6":"Combinação de acabamentos"}
@@ -593,7 +515,6 @@ def processar_mensagem(numero, mensagem):
                 resposta=f"Qual quantidade você está considerando?\n\n{menu_qtd(minimo)}"
                 sessao["etapa"]="quantidade"
 
-    # EMPASTAMENTO DETALHE
     elif etapa=="empastamento_det":
         dados["empastamento_tipo"]=msg
         produto_num=dados.get("produto_num","1")
@@ -601,7 +522,6 @@ def processar_mensagem(numero, mensagem):
         resposta=f"Qual quantidade você está considerando?\n\n{menu_qtd(minimo)}"
         sessao["etapa"]="quantidade"
 
-    # QUANTIDADE
     elif etapa=="quantidade":
         primeiro=dados.get("nome","").split()[0]
         produtos_lista=dados.get("produtos_lista",["1"])
@@ -646,16 +566,15 @@ def processar_mensagem(numero, mensagem):
                           "1. Sim, quero a proposta\n2. Prefiro pensar\n3. Não, obrigada")
             sessao["etapa"]="media_proposta"
 
-    # MEDIA PROPOSTA
     elif etapa=="media_proposta":
         primeiro=dados.get("nome","").split()[0]
         if any(p in ml for p in ["1","sim","quero","pode","vamos","claro"]):
-            resposta=var(f"Que ótimo! 😁 Você tem algum prazo ou data importante para receber esse material?",
+            resposta=var(f"Que ótimo! 😁 Você tem algum prazo importante para receber esse material?",
                          f"Maravilha, {primeiro}! 😁 Existe algum prazo que eu deva considerar na proposta?")
             sessao["etapa"]="urgencia"
         elif any(p in ml for p in ["2","pensar","depois","calma","talvez"]):
-            resposta=var("Claro! Sem qualquer pressa. Quando quiser retomar, estaremos aqui. 😊\n\nAcompanhe nossos projetos em @primyn.store",
-                         f"Com certeza, {primeiro}. Essas decisões merecem calma. Quando quiser continuar, é só chamar. 😊")
+            resposta=var("Claro! Sem qualquer pressa. Quando quiser retomar, estaremos aqui. 😊\n\nAcompanhe em @primyn.store",
+                         f"Com certeza, {primeiro}. Quando quiser continuar, é só chamar. 😊")
             dados["status"]="aguardando_resposta"; sessao["etapa"]="encerrado"
             try:
                 from followup import agendar_followup
@@ -666,23 +585,20 @@ def processar_mensagem(numero, mensagem):
                          "Entendido! Quando quiser explorar uma proposta, será um prazer. 😊")
             dados["status"]="perdido"; sessao["etapa"]="encerrado"
 
-    # URGÊNCIA
     elif etapa=="urgencia":
-        dados["urgencia"]=msg; primeiro=dados.get("nome","").split()[0]
+        dados["urgencia"]=msg
         urgente=any(p in ml for p in ["urgente","rápido","rapido","pressa","amanhã","amanha","semana","logo","dias"])
         aviso=("Projetos com criação e produção premium têm prazo médio de 7 a 10 dias úteis. "
-               "Vou sinalizar a urgência no encaminhamento. 🚀\n\n") if urgente else ""
-        resposta=(f"{aviso}{handoff_msg()}")
+               "Vou sinalizar a urgência no encaminhamento.\n\n") if urgente else ""
+        resposta=f"{aviso}{hdoff()}"
         dados["status"]="handoff"; sessao["etapa"]="handoff"; handoff_data=dados
 
-    # HANDOFF
     elif etapa=="handoff":
         primeiro=dados.get("nome","").split()[0]
         resposta=(f"Antes de encerrar, {primeiro} — como foi a sua experiência com este atendimento?\n\n"
                   "1. Ótimo\n2. Bom\n3. Precisa melhorar")
         sessao["etapa"]="feedback"
 
-    # FEEDBACK
     elif etapa=="feedback":
         avals={"1":"Ótimo","2":"Bom","3":"Precisa melhorar"}
         av=avals.get(msg.strip(),msg); dados["avaliacao"]=av
@@ -693,7 +609,6 @@ def processar_mensagem(numero, mensagem):
             resposta=f"Que bom, {primeiro}! Foi um prazer te atender. Até breve! 🤍"
         sessao["etapa"]="encerrado"
 
-    # ENCERRADO
     elif etapa=="encerrado":
         primeiro=dados.get("nome","").split()[0] if dados.get("nome") else ""
         resposta=f"Olá, {primeiro}! Como posso te ajudar? 😊" if primeiro else "Olá! Como posso te ajudar hoje? 😊"
