@@ -796,4 +796,4 @@ def processar_mensagem(numero, mensagem):
     upd_sessao(numero,sessao)
     return resposta,handoff_data
     
-    carregar_sessoes = load
+carregar_sessoes = load
