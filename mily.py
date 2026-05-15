@@ -1,3 +1,4 @@
+
 import json, os, random
 from datetime import datetime
 
@@ -157,7 +158,7 @@ def processar_mensagem(numero, mensagem):
             dados["origem"]="Google"
             sessao["etapa"]="coleta_dados"
             resposta=(
-                "Que ótimo que nos encontrou pelo Google! ✨\n\n"
+                "Que ótimo que nos encontrou por lá! ✨\n\n"
                 "Perfeito ✨ Para prepararmos uma proposta personalizada para o seu projeto, "
                 "poderia nos informar:\n\n"
                 "Nome e sobrenome:\nÁrea de atuação da empresa/profissão:\nMelhor e-mail para contato:"
@@ -181,28 +182,68 @@ def processar_mensagem(numero, mensagem):
 
     # ── ORIGEM INDICAÇÃO ──────────────────────────────────────────────────────
     elif etapa=="origem_indicacao":
-        dados["indicado_por"]=msg
-        sessao["etapa"]="coleta_dados"
-        resposta=(
-            "Obrigada! Vamos agradecer com carinho por você. 🤍\n\n"
-            "Perfeito ✨ Para prepararmos uma proposta personalizada para o seu projeto, "
-            "poderia nos informar:\n\n"
+        # Rejeitar se for só número ou muito curto
+        indicado=msg.strip()
+        if indicado.isdigit() or len(indicado)<3 or not any(c.isalpha() for c in indicado):
+            tent+=1; sessao["tentativas"]=tent
+            resposta=("Por gentileza, nos informe o nome de quem indicou. "
+                      "Ex: Ana Silva, Dr. Carlos...")
+        else:
+            dados["indicado_por"]=indicado
+            sessao["etapa"]="coleta_dados"; sessao["tentativas"]=0
+            resposta=(
+                "Obrigada! Vamos agradecer com carinho por você. 🤍\n\n"
+                "Perfeito ✨ Para prepararmos uma proposta personalizada para o seu projeto, "
+                "poderia nos informar:\n\n"
             "Nome e sobrenome:\nÁrea de atuação da empresa/profissão:\nMelhor e-mail para contato:"
         )
 
     # ── COLETA CLIENTE / LEAD ANTIGO ──────────────────────────────────────────
     elif etapa=="coleta_cliente":
         r=extrair_bloco(msg,["nome","email","material"])
-        if r.get("nome"): dados["nome"]=r["nome"]
-        if r.get("email"): dados["email"]=r["email"]
-        if r.get("material"): dados["material_interesse"]=r["material"]
-        p=primeiro_nome()
-        saudacao=f"Obrigada, {p}! " if p else "Obrigada! "
-        resposta=(f"{saudacao}Vou encaminhar você agora para um especialista da Primyn, "
-                  "que dará continuidade ao seu atendimento de forma personalizada. ✨\n\n"
-                  "Antes de encerrar — como foi a sua experiência com este atendimento?\n\n"
-                  "1. Ótimo\n2. Bom\n3. Precisa melhorar")
-        handoff_data=dados; sessao["etapa"]="feedback"
+        nome_ext=r.get("nome","")
+        email_ext=r.get("email","")
+        material_ext=r.get("material","")
+
+        erros=[]
+        if not nome_valido(nome_ext):
+            erros.append("• Nome e sobrenome completos (ex: Maria Silva)")
+        # E-mail é opcional para clientes, mas se informado deve ser válido
+        if email_ext and not email_valido(email_ext):
+            erros.append("• E-mail válido (ex: seunome@gmail.com)")
+
+        if erros:
+            tent+=1; sessao["tentativas"]=tent
+            if tent>=4:
+                # Após muitas tentativas encaminha mesmo assim
+                if nome_ext: dados["nome"]=nome_ext
+                p=primeiro_nome()
+                saudacao=f"Obrigada, {p}! " if p else "Obrigada! "
+                sessao["tentativas"]=0; sessao["etapa"]="feedback"
+                resposta=(f"{saudacao}Vou encaminhar você agora para um especialista da Primyn, "
+                          "que dará continuidade ao seu atendimento de forma personalizada. ✨\n\n"
+                          "Antes de encerrar — como foi a sua experiência com este atendimento?\n\n"
+                          "1. Ótimo\n2. Bom\n3. Precisa melhorar")
+                handoff_data=dados
+            else:
+                motivo="\n".join(erros)
+                resposta=(f"Não consegui identificar corretamente:\n\n{motivo}\n\n"
+                          "Por favor, envie nesse formato:\n\n"
+                          "Nome e sobrenome: Maria Silva\n"
+                          "E-mail: maria@gmail.com\n"
+                          "Material de interesse: Cartão de visita")
+        else:
+            dados["nome"]=nome_ext
+            if email_ext: dados["email"]=email_ext
+            if material_ext: dados["material_interesse"]=material_ext
+            p=primeiro_nome()
+            saudacao=f"Obrigada, {p}! " if p else "Obrigada! "
+            sessao["tentativas"]=0; sessao["etapa"]="feedback"
+            resposta=(f"{saudacao}Vou encaminhar você agora para um especialista da Primyn, "
+                      "que dará continuidade ao seu atendimento de forma personalizada. ✨\n\n"
+                      "Antes de encerrar — como foi a sua experiência com este atendimento?\n\n"
+                      "1. Ótimo\n2. Bom\n3. Precisa melhorar")
+            handoff_data=dados
 
     # ── COLETA DADOS NOVOS ────────────────────────────────────────────────────
     elif etapa=="coleta_dados":
@@ -418,15 +459,26 @@ def processar_mensagem(numero, mensagem):
     # ── FEEDBACK ──────────────────────────────────────────────────────────────
     elif etapa=="feedback":
         avals={"1":"Ótimo","2":"Bom","3":"Precisa melhorar"}
-        av=avals.get(msg.strip(),msg); dados["avaliacao"]=av
-        p=primeiro_nome()
-        if msg.strip()=="3" or "melhorar" in ml or "ruim" in ml:
-            resposta=(f"Obrigada pelo retorno{', '+p if p else ''}. "
-                      "Cada feedback nos ajuda a evoluir. 🤍")
+        # Detectar opção por número ou palavra
+        opcao=None
+        if msg.strip() in avals: opcao=msg.strip()
+        elif any(p in ml for p in ["ótimo","otimo","excelente","perfeito"]): opcao="1"
+        elif any(p in ml for p in ["bom","boa","gostei","legal"]): opcao="2"
+        elif any(p in ml for p in ["melhorar","ruim","mal","péssimo","pessimo","precisa"]): opcao="3"
+
+        if not opcao:
+            tent+=1; sessao["tentativas"]=tent
+            resposta="Por favor, escolha:\n\n1. Ótimo\n2. Bom\n3. Precisa melhorar"
         else:
-            resposta=(f"Que bom{', '+p if p else ''}! "
-                      "Foi um prazer te atender. Até breve! 🤍")
-        sessao["etapa"]="encerrado"
+            dados["avaliacao"]=avals[opcao]
+            p=primeiro_nome()
+            if opcao=="3":
+                resposta=(f"Obrigada pelo retorno{', '+p if p else ''}. "
+                          "Cada feedback nos ajuda a evoluir. 🤍")
+            else:
+                resposta=(f"Que bom{', '+p if p else ''}! "
+                          "Foi um prazer te atender. Até breve! 🤍")
+            sessao["etapa"]="encerrado"
 
     # ── ENCERRADO ─────────────────────────────────────────────────────────────
     elif etapa=="encerrado":
