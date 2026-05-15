@@ -1,4 +1,3 @@
-
 import json, os, random
 from datetime import datetime
 
@@ -158,7 +157,7 @@ def processar_mensagem(numero, mensagem):
             dados["origem"]="Google"
             sessao["etapa"]="coleta_dados"
             resposta=(
-                "Que ótimo que nos encontrou por lá! ✨\n\n"
+                "Que ótimo que nos encontrou pelo Google! ✨\n\n"
                 "Perfeito ✨ Para prepararmos uma proposta personalizada para o seu projeto, "
                 "poderia nos informar:\n\n"
                 "Nome e sobrenome:\nÁrea de atuação da empresa/profissão:\nMelhor e-mail para contato:"
@@ -300,16 +299,7 @@ def processar_mensagem(numero, mensagem):
 
     # ── IDENTIDADE VISUAL ─────────────────────────────────────────────────────
     elif etapa=="identidade_visual":
-        if any(p in ml for p in ["2","ainda não","ainda nao","interesse","saber mais","não possuo","nao possuo"]):
-            dados["identidade_visual"]="interesse"
-            dados["contato_designer"]=True
-        elif any(p in ml for p in ["3","não tenho interesse","nao tenho","sem interesse"]):
-            dados["identidade_visual"]="sem_interesse"
-        else:
-            dados["identidade_visual"]="possui"
-
-        sessao["tentativas"]=0; sessao["etapa"]="linha_estilo"
-        resposta=(
+        ESTILO=(
             "Qual estilo mais representa a experiência que você deseja transmitir com a sua marca?\n\n"
             "1. Clássico e refinado — Elegância discreta, apresentação sofisticada e minimalista.\n\n"
             "2. Premium com presença e textura — Materiais mais encorpados, sensação de qualidade "
@@ -317,6 +307,33 @@ def processar_mensagem(numero, mensagem):
             "3. Luxo com acabamentos exclusivos — Experiência de alto padrão com materiais e "
             "acabamentos sofisticados."
         )
+        if any(p in ml for p in ["2","ainda não","ainda nao","interesse","saber mais","não possuo","nao possuo"]) and "3" not in msg:
+            dados["identidade_visual"]="interesse"
+            dados["contato_designer"]=True
+            sessao["tentativas"]=0; sessao["etapa"]="linha_estilo"
+            resposta=(
+                "Perfeito ✨\n\n"
+                "Seu contato foi encaminhado para a nossa designer Ane, responsável pelos projetos "
+                "de identidade visual da Primyn, e ela entrará em contato com você o mais breve "
+                "possível para entender melhor os detalhes do seu projeto e apresentar as "
+                "possibilidades de criação.\n\n"
+                "Será um prazer desenvolver algo exclusivo e estratégico para a sua marca.\n\n"
+                "Agora vamos continuar. "+ESTILO
+            )
+        elif any(p in ml for p in ["3","não tenho interesse","nao tenho","sem interesse"]):
+            dados["identidade_visual"]="sem_interesse"
+            sessao["tentativas"]=0; sessao["etapa"]="linha_estilo"
+            resposta=ESTILO
+        elif any(p in ml for p in ["1","sim","já possuo","ja possuo","possuo","tenho"]):
+            dados["identidade_visual"]="possui"
+            sessao["tentativas"]=0; sessao["etapa"]="linha_estilo"
+            resposta=ESTILO
+        else:
+            tent+=1; sessao["tentativas"]=tent
+            resposta=("Opção não identificada. Por favor, escolha:\n\n"
+                      "1. Sim, já possuo identidade visual\n"
+                      "2. Ainda não, e tenho interesse em saber mais\n"
+                      "3. Ainda não, mas não tenho interesse")
 
     # ── LINHA DE ESTILO ───────────────────────────────────────────────────────
     elif etapa=="linha_estilo":
