@@ -1,3 +1,4 @@
+
 # ═══════════════════════════════════════════════
 # PRIMYN STUDIO — SERVIDOR PRINCIPAL (COMPLETO)
 # ═══════════════════════════════════════════════
@@ -76,6 +77,9 @@ def webhook_mily():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+# WhatsApp da Bela para notificações
+BELA_WHATSAPP = "15712647236"
+
 def acionar_handoff(dados):
     try:
         salvar_lead(dados)
@@ -83,7 +87,27 @@ def acionar_handoff(dados):
         caminho_pdf = gerar_proposta(dados)
         print(f"[HANDOFF] PDF gerado: {caminho_pdf}")
         notificar_bela(dados)
-        print(f"[HANDOFF] Bela notificada")
+        print(f"[HANDOFF] Bela notificada por e-mail")
+
+        # Notificação WhatsApp para Bela
+        try:
+            msg_bela = (
+                f"✦ Novo lead qualificado!\n\n"
+                f"👤 Nome: {dados.get('nome', 'N/A')}\n"
+                f"📱 WhatsApp: {dados.get('whatsapp', 'N/A')}\n"
+                f"📧 E-mail: {dados.get('email', 'N/A')}\n"
+                f"🏢 Área: {dados.get('area', 'N/A')}\n"
+                f"🛍 Produto: {dados.get('produto', 'N/A')}\n"
+                f"✨ Estilo: {dados.get('linha', 'N/A')}\n"
+                f"💰 Faixa: {dados.get('faixa_investimento', 'N/A')}\n"
+                f"🎨 Identidade visual: {dados.get('identidade_visual', 'N/A')}\n"
+                f"🖼 Criação de arte: {'Sim' if dados.get('criacao_arte') else 'Não'}"
+            )
+            enviar_mensagem(BELA_WHATSAPP, msg_bela)
+            print(f"[HANDOFF] Bela notificada por WhatsApp")
+        except Exception as e:
+            print(f"[ERRO WHATSAPP BELA] {e}")
+
         email_cliente = dados.get("email")
         nome_cliente = dados.get("nome", "").split()[0]
         if email_cliente:
