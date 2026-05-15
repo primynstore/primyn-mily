@@ -1,4 +1,5 @@
 
+    
 # ═══════════════════════════════════════════════
 # PRIMYN STUDIO — SERVIDOR PRINCIPAL (COMPLETO)
 # ═══════════════════════════════════════════════
@@ -202,6 +203,34 @@ def painel():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "healthy"}), 200
+
+@app.route("/reset/<numero>", methods=["GET"])
+def reset_sessao(numero):
+    """Reseta a sessão de um número específico."""
+    import json
+    try:
+        with open("sessoes.json") as f:
+            sessoes = json.load(f)
+        if numero in sessoes:
+            del sessoes[numero]
+            with open("sessoes.json", "w") as f:
+                json.dump(sessoes, f, ensure_ascii=False, indent=2)
+            return jsonify({"status": "ok", "mensagem": f"Sessão de {numero} resetada. Mande 'oi' pelo WhatsApp para recomeçar."}), 200
+        else:
+            return jsonify({"status": "ok", "mensagem": f"Número {numero} não tinha sessão ativa."}), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
+
+@app.route("/reset-all", methods=["GET"])
+def reset_all():
+    """Reseta TODAS as sessões. Use com cuidado."""
+    import json
+    try:
+        with open("sessoes.json", "w") as f:
+            json.dump({}, f)
+        return jsonify({"status": "ok", "mensagem": "Todas as sessões foram resetadas."}), 200
+    except Exception as e:
+        return jsonify({"status": "erro", "mensagem": str(e)}), 500
 
 @app.route("/test", methods=["POST"])
 def test_mily():
