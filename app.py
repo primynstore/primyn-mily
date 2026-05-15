@@ -6,17 +6,33 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from mily import processar_mensagem, carregar_sessoes
 from zapi import enviar_mensagem, enviar_documento
-from email_service import notificar_andre, enviar_confirmacao_cliente, notificar_designer
+from email_service import notificar_bela, enviar_confirmacao_cliente, notificar_designer
 from crm import salvar_lead
 from proposta_pdf import gerar_proposta
 from followup import carregar_followups
 from scheduler import iniciar_scheduler
-import os
+import os, json
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 iniciar_scheduler()
+
+# ═══════════════════════════════════════════════
+# LISTA DE BLOQUEIO — números que a Mily ignora
+# (clientes que você já está atendendo manualmente)
+# ═══════════════════════════════════════════════
+BLOQUEIO_FILE = "bloqueio.json"
+
+def carregar_bloqueio():
+    if os.path.exists(BLOQUEIO_FILE):
+        with open(BLOQUEIO_FILE, "r") as f:
+            return json.load(f)
+    return []
+
+def salvar_bloqueio(lista):
+    with open(BLOQUEIO_FILE, "w") as f:
+        json.dump(lista, f, ensure_ascii=False, indent=2)
 
 
 @app.route("/", methods=["GET"])
@@ -40,6 +56,13 @@ def webhook_mily():
         if not numero or not mensagem:
             return jsonify({"status": "ignored", "reason": "no_text"}), 200
         numero = numero.replace("@s.whatsapp.net", "").replace("@c.us", "")
+
+        # ── VERIFICAR BLOQUEIO ──────────────────────
+        bloqueio = carregar_bloqueio()
+        if numero in bloqueio:
+            print(f"[BLOQUEADO] {numero} — Mily ignorando (atendimento manual)")
+            return jsonify({"status": "blocked"}), 200
+
         print(f"[RECEBIDO] {numero}: {mensagem}")
         resposta, handoff_data = processar_mensagem(numero, mensagem)
         if resposta:
@@ -59,20 +82,56 @@ def acionar_handoff(dados):
         print(f"[HANDOFF] CRM atualizado: {dados.get('nome')}")
         caminho_pdf = gerar_proposta(dados)
         print(f"[HANDOFF] PDF gerado: {caminho_pdf}")
-        notificar_andre(dados)
-        print(f"[HANDOFF] André notificado")
+        notificar_bela(dados)
+        print(f"[HANDOFF] Bela notificada")
         email_cliente = dados.get("email")
         nome_cliente = dados.get("nome", "").split()[0]
         if email_cliente:
             enviar_confirmacao_cliente(email_cliente, nome_cliente)
             print(f"[HANDOFF] E-mail enviado ao cliente")
-        if dados.get("criacao") == "identidade_visual":
+        if dados.get("identidade_visual") == "interesse":
             notificar_designer(dados)
-            print(f"[HANDOFF] Designer notificado")
+            print(f"[HANDOFF] Designer (Ane) notificada")
         print(f"[HANDOFF] ✅ Completo para {dados.get('nome')}")
     except Exception as e:
         print(f"[ERRO HANDOFF] {e}")
 
+
+# ═══════════════════════════════════════════════
+# ROTAS DE BLOQUEIO — gerenciar via API
+# ═══════════════════════════════════════════════
+
+@app.route("/bloqueio", methods=["GET"])
+def ver_bloqueio():
+    """Lista todos os números bloqueados."""
+    return jsonify({"bloqueados": carregar_bloqueio()})
+
+@app.route("/bloqueio/add", methods=["POST"])
+def adicionar_bloqueio():
+    """Bloqueia um número. Body: {"numero": "5511999999999"}"""
+    numero = request.json.get("numero", "").strip()
+    if not numero:
+        return jsonify({"erro": "numero obrigatório"}), 400
+    lista = carregar_bloqueio()
+    if numero not in lista:
+        lista.append(numero)
+        salvar_bloqueio(lista)
+    return jsonify({"status": "bloqueado", "numero": numero, "total": len(lista)})
+
+@app.route("/bloqueio/remove", methods=["POST"])
+def remover_bloqueio():
+    """Desbloqueia um número. Body: {"numero": "5511999999999"}"""
+    numero = request.json.get("numero", "").strip()
+    lista = carregar_bloqueio()
+    if numero in lista:
+        lista.remove(numero)
+        salvar_bloqueio(lista)
+    return jsonify({"status": "desbloqueado", "numero": numero, "total": len(lista)})
+
+
+# ═══════════════════════════════════════════════
+# ROTAS EXISTENTES
+# ═══════════════════════════════════════════════
 
 @app.route("/dashboard", methods=["GET"])
 def dashboard():
