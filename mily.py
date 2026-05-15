@@ -138,7 +138,7 @@ def processar_mensagem(numero, mensagem):
 
         else:
             tent+=1; sessao["tentativas"]=tent
-            resposta=("Por favor, escolha uma das opções:\n\n"
+            resposta=("Opção não encontrada. Por favor, escolha uma das opções abaixo:\n\n"
                       "1. Google\n2. Instagram\n3. Indicação\n"
                       "4. Já sou cliente\n5. Estava em contato anteriormente")
 
@@ -268,7 +268,7 @@ def processar_mensagem(numero, mensagem):
             dados["linha"]="Luxo com acabamentos exclusivos"
         else:
             tent+=1; sessao["tentativas"]=tent
-            resposta=("Por favor, escolha uma das opções:\n\n"
+            resposta=("Opção não identificada. Por favor, escolha:\n\n"
                       "1. Clássico e refinado\n"
                       "2. Premium com presença e textura\n"
                       "3. Luxo com acabamentos exclusivos")
@@ -299,7 +299,7 @@ def processar_mensagem(numero, mensagem):
             elif "acima" in ml or "2.000" in msg or "2000" in msg: opcao="4"
         if not opcao:
             tent+=1; sessao["tentativas"]=tent
-            resposta=("Por favor, escolha uma das opções:\n\n"
+            resposta=("Opção não identificada. Por favor, escolha:\n\n"
                       "1. Entre R$ 400 e R$ 700\n2. Entre R$ 700 e R$ 1.200\n"
                       "3. Entre R$ 1.200 e R$ 2.000\n4. Acima de R$ 2.000")
             sessao["dados"]=dados; upd_sessao(numero,sessao)
