@@ -26,33 +26,71 @@ def get_sessao(num):
 def upd_sessao(num,sessao):
     s=load(); sessao["ultimo"]=datetime.now().isoformat(); s[num]=sessao; save(s)
 
+PALAVRAS_INVALIDAS={
+    "eu","ok","sim","não","nao","oi","olá","ola","hey","hi","hello",
+    "obrigada","obrigado","certo","claro","perfeito","ótimo","otimo",
+    "nada","teste","test","aaa","bbb","xxx","tudo","bem"
+}
+
+def email_valido(e):
+    e=e.strip().lower()
+    parts=e.split("@")
+    if len(parts)!=2: return False
+    local,domain=parts
+    if len(local)<2: return False
+    if "." not in domain: return False
+    partes_dom=domain.split(".")
+    if len(partes_dom[-1])<2: return False
+    if len(partes_dom[0])<2: return False
+    return True
+
+def nome_valido(n):
+    if not n: return False
+    partes=[p.lower() for p in n.strip().split() if p.isalpha() and len(p)>=2]
+    reais=[p for p in partes if p not in PALAVRAS_INVALIDAS]
+    return len(reais)>=2
+
 def extrair_bloco(msg, campos):
-    """Extrai campos de uma mensagem em bloco. campos = lista de chaves."""
+    """Extrai campos de uma mensagem em bloco com validação rigorosa."""
     lines=[l.strip() for l in msg.strip().splitlines() if l.strip()]
     resultado={c:"" for c in campos}
+
+    # 1. Tentar extrair por labels (formato com ":")
     for l in lines:
         ll=l.lower()
-        if "nome" in ll and ":" in l:
-            resultado["nome"]=l.split(":",1)[1].strip().title()
-        elif ("área" in ll or "area" in ll or "atuação" in ll or "atuacao" in ll or "profiss" in ll) and ":" in l:
-            resultado["area"]=l.split(":",1)[1].strip().title()
-        elif ("e-mail" in ll or "email" in ll) and ":" in l:
-            resultado["email"]=l.split(":",1)[1].strip().lower()
-        elif ("material" in ll or "interesse" in ll) and ":" in l:
-            resultado["material"]=l.split(":",1)[1].strip()
-        elif "@" in l and "." in l:
-            resultado["email"]=l.strip().lower()
-    # Fallback sem labels
-    if not resultado.get("nome") and len(lines)>=1:
-        resultado["nome"]=lines[0].title()
-    if not resultado.get("area") and len(lines)>=2:
-        resultado["area"]=lines[1].title()
+        if ":" not in l: continue
+        val=l.split(":",1)[1].strip()
+        if not val: continue
+        if "nome" in ll:
+            resultado["nome"]=val.title()
+        elif any(p in ll for p in ["área","area","atuação","atuacao","profiss","empresa"]):
+            resultado["area"]=val.title()
+        elif any(p in ll for p in ["e-mail","email","contato"]):
+            resultado["email"]=val.lower()
+        elif any(p in ll for p in ["material","interesse"]):
+            resultado["material"]=val
+
+    # 2. Procurar e-mail em qualquer linha (tem @ e ponto após @)
     if not resultado.get("email"):
         for l in lines:
-            if "@" in l and ".":
-                resultado["email"]=l.strip().lower(); break
-    if not resultado.get("material") and len(lines)>=4:
-        resultado["material"]=lines[3]
+            tok=l.strip().lower()
+            if "@" in tok:
+                # Pegar só o token com @
+                for word in tok.split():
+                    if "@" in word and email_valido(word):
+                        resultado["email"]=word; break
+
+    # 3. Fallback sem labels: só se tiver 3+ linhas separadas (cada linha = um campo)
+    if not resultado.get("nome") and len(lines)>=3:
+        candidato=lines[0].strip()
+        # Rejeitar se candidato contém @ ou números ou é muito curto
+        if "@" not in candidato and len(candidato)>3:
+            resultado["nome"]=candidato.title()
+        if not resultado.get("area"):
+            resultado["area"]=lines[1].strip().title()
+        if not resultado.get("email") and len(lines)>=3:
+            resultado["email"]=lines[2].strip().lower()
+
     return resultado
 
 def processar_mensagem(numero, mensagem):
@@ -170,23 +208,45 @@ def processar_mensagem(numero, mensagem):
     # ── COLETA DADOS NOVOS ────────────────────────────────────────────────────
     elif etapa=="coleta_dados":
         r=extrair_bloco(msg,["nome","area","email"])
-        if r.get("nome"): dados["nome"]=r["nome"]
-        if r.get("area"): dados["area"]=r["area"]
-        if r.get("email"): dados["email"]=r["email"]
-        if not dados.get("nome"):
+        nome_ext=r.get("nome","")
+        email_ext=r.get("email","")
+        area_ext=r.get("area","")
+
+        erros=[]
+        if not nome_valido(nome_ext):
+            erros.append("• Nome e sobrenome completos (ex: Maria Silva)")
+        if not email_valido(email_ext):
+            erros.append("• E-mail válido (ex: seunome@gmail.com)")
+
+        if erros:
             tent+=1; sessao["tentativas"]=tent
-            resposta=("Não consegui identificar todos os dados. Por favor, envie neste formato:\n\n"
-                      "Nome e sobrenome:\nÁrea de atuação:\nMelhor e-mail para contato:")
+            if tent>=4 and nome_valido(nome_ext):
+                # Após muitas tentativas aceita sem e-mail
+                dados["nome"]=nome_ext
+                if area_ext: dados["area"]=area_ext
+                p=primeiro_nome(); sessao["tentativas"]=0; sessao["etapa"]="produto"
+                resposta=(f"Perfeito, {p}! Vamos seguir. ✨\n\n"
+                          "O que você deseja desenvolver na Primyn?\n\n"
+                          "1. Cartão de visita premium\n"
+                          "2. Papelaria personalizada\n"
+                          "3. Projeto exclusivo/específico")
+            else:
+                motivo="\n".join(erros)
+                resposta=(f"Não consegui identificar corretamente:\n\n{motivo}\n\n"
+                          "Por favor, envie nesse formato:\n\n"
+                          "Nome e sobrenome: Maria Silva\n"
+                          "Área de atuação: Medicina\n"
+                          "Melhor e-mail: maria@gmail.com")
         else:
-            p=primeiro_nome(); sessao["tentativas"]=0
-            sessao["etapa"]="produto"
-            resposta=(
-                f"Perfeito, {p}! Seus dados foram anotados. 😊\n\n"
-                "O que você deseja desenvolver na Primyn?\n\n"
-                "1. Cartão de visita premium\n"
-                "2. Papelaria personalizada\n"
-                "3. Projeto exclusivo/específico"
-            )
+            dados["nome"]=nome_ext
+            if area_ext: dados["area"]=area_ext
+            dados["email"]=email_ext
+            p=primeiro_nome(); sessao["tentativas"]=0; sessao["etapa"]="produto"
+            resposta=(f"Perfeito, {p}! Seus dados foram registrados. ✨\n\n"
+                      "O que você deseja desenvolver na Primyn?\n\n"
+                      "1. Cartão de visita premium\n"
+                      "2. Papelaria personalizada\n"
+                      "3. Projeto exclusivo/específico")
 
     # ── PRODUTO ───────────────────────────────────────────────────────────────
     elif etapa=="produto":
