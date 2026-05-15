@@ -176,5 +176,5 @@ def notificar_designer(dados):
     </body>
     </html>
     """
-    designer_email = os.getenv("DESIGNER_EMAIL", NOTIFY_EMAIL)
+    designer_email = os.getenv("DESIGNER_EMAIL", "hello.anedesign@gmail.com")
     return enviar_email(designer_email, assunto, corpo)
