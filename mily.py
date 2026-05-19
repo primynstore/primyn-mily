@@ -158,7 +158,7 @@ def processar_mensagem(numero, mensagem):
             dados["origem"]="Google"
             sessao["etapa"]="coleta_dados"
             resposta=(
-                "Que ótimo que nos encontrou por lá! ✨\n\n"
+                "Que ótimo que nos encontrou pelo Google! ✨\n\n"
                 "Perfeito ✨ Para prepararmos uma proposta personalizada para o seu projeto, "
                 "poderia nos informar:\n\n"
                 "Nome e sobrenome:\nÁrea de atuação da empresa/profissão:\nMelhor e-mail para contato:"
