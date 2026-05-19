@@ -195,7 +195,7 @@ def processar_mensagem(numero, mensagem):
                 "Obrigada! Vamos agradecer com carinho por você. 🤍\n\n"
                 "Perfeito ✨ Para prepararmos uma proposta personalizada para o seu projeto, "
                 "poderia nos informar:\n\n"
-            "Nome e sobrenome:\nÁrea de atuação da empresa/profissão:\nMelhor e-mail para contato:"
+            "Nome e sobrenome:\nÁrea de atuação da empresa/profissão:\nMelhor e-mail para enviar a proposta:"
         )
 
     # ── COLETA CLIENTE / LEAD ANTIGO ──────────────────────────────────────────
@@ -254,7 +254,7 @@ def processar_mensagem(numero, mensagem):
 
         erros=[]
         if not nome_valido(nome_ext):
-            erros.append("• Nome e sobrenome completos (ex: Maria Silva)")
+            erros.append("• Nome e sobrenome (ex: Maria Silva)")
         if not email_valido(email_ext):
             erros.append("• E-mail válido (ex: seunome@gmail.com)")
 
@@ -401,6 +401,7 @@ def processar_mensagem(numero, mensagem):
             "2. Entre R$ 700 e R$ 1.200\n"
             "3. Entre R$ 1.200 e R$ 2.000\n"
             "4. Acima de R$ 2.000"
+            "5. Nenhuma das alternativas"
         )
 
     # ── FAIXA DE INVESTIMENTO ─────────────────────────────────────────────────
@@ -417,6 +418,23 @@ def processar_mensagem(numero, mensagem):
             elif "acima" in ml or "2.000" in msg or "2000" in msg: opcao="4"
         if not opcao:
             tent+=1; sessao["tentativas"]=tent
+            if "5" in msg or any(p in ml for p in ["nenhuma","nenhum","outro","abaixo"]):
+            p=primeiro_nome()
+            resposta=(
+                f"Entendo perfeitamente{', '+p if p else ''} ✨\n\n"
+                "Apenas para te dar uma referência, nossos projetos costumam partir de R$ 400, "
+                "pois trabalhamos com materiais e acabamentos mais sofisticados, pensados para "
+                "transmitir uma percepção mais premium da marca.\n\n"
+                "Quando estiver pronto(a) e quiser explorar as possibilidades, será um prazer "
+                "atendê-lo(a). Enquanto isso, nosso Instagram @primyn.store tem muito para "
+                "te inspirar ✨"
+            )
+            dados["faixa_investimento"]="Nenhuma das alternativas"
+            dados["status"]="perdido"
+            sessao["etapa"]="encerrado"
+            sessao["dados"]=dados
+            upd_sessao(numero,sessao)
+            return resposta, handoff_data
             resposta=("Opção não identificada. Por favor, escolha:\n\n"
                       "1. Entre R$ 400 e R$ 700\n2. Entre R$ 700 e R$ 1.200\n"
                       "3. Entre R$ 1.200 e R$ 2.000\n4. Acima de R$ 2.000")
